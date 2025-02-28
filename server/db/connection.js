@@ -9,9 +9,8 @@ async function connect() {
     await client.connect();
     return client.db(dbName);
   } catch (err) {
-    console.error('MongoDB 连接错误:', err);
-    process.exit(1);
+    console.error(err);
   }
 }
 
-module.exports = { connect, client };
+module.exports = connect;

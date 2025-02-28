@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../utils/token');
-const { connect } = require('../db/connection');
+const connect = require('../db/connection');
 const { getNextSequence } = require('../db/counter');
 
 router.get('/', async (req, res) => {
@@ -47,13 +47,13 @@ router.post('/', async (req, res) => {
     const db = await connect();
     const rooms = db.collection('rooms');
 
-    await rooms.insertOne({
+    const result = await rooms.insertOne({
       rid,
       name,
       members,
     });
 
-    const room = await rooms.findOne({ rid });
+    const room = await rooms.findOne({ _id: result.insertedId });
 
     res.status(201).json({ code: 'SUCCESS', message: '创建房间成功', data: room });
   }

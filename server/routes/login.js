@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createHash } = require('../utils/hash')
 const { generateToken } = require('../utils/token');
-const { connect } = require('../db/connection');
+const connect = require('../db/connection');
 
 router.post('/', async (req, res) => {
   const { username, password } = req.body;

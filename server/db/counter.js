@@ -1,4 +1,4 @@
-const { connect } = require('./connection');
+const connect = require('./connection');
 
 async function getNextSequence(name) {
   const db = await connect();
