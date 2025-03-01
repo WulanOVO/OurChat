@@ -255,3 +255,47 @@ button:disabled:hover {
 .room-list::-webkit-scrollbar-thumb:hover {
   background: #999;
 }
+
+.message-info {
+  font-size: 11px;
+  color: #999;
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.my-message .message-info {
+  text-align: right;
+}
+
+.timestamp {
+  margin-right: 8px;
+}
+
+.read-status {
+  font-size: 11px;
+}
+
+.error-message {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ff4d4f;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to { opacity: 0; transform: translate(-50%, -20px); }
+}

@@ -60,20 +60,7 @@ async function init(server) {
 
             users.set(ws, { rid, ...userData });
 
-            // 通知房间其他成员有新用户加入
-            for (const [client, clientUser] of users.entries()) {
-              if (client !== ws && clientUser.rid === rid) {
-                client.send(JSON.stringify({
-                  type: 'user_joined',
-                  user: {
-                    uid: userData.uid,
-                    nickname: userData.nickname,
-                    role: userData.role
-                  }
-                }));
-              }
-            }
-
+            // 发送用户信息和房间信息
             ws.send(JSON.stringify({
               type: 'user',
               user: userData,
@@ -117,12 +104,11 @@ async function init(server) {
               room: user.rid,
               sender: user.uid,
               content: data.content.trim(),
-              type: 'text',
+              content_type: 'text',
               timestamp: new Date(),
               read_by: [user.uid]
             };
 
-            // 保存消息到数据库
             const result = await dbMessages.insertOne(newMessage);
 
             if (!result.acknowledged) {
@@ -133,11 +119,15 @@ async function init(server) {
             // 广播消息给同一房间的所有用户
             const { _id, ...messageWithoutId } = newMessage;
             for (const [client, clientUser] of users.entries()) {
-              if (clientUser.rid === user.rid) {
-                client.send(JSON.stringify({
-                  type: 'chat',
-                  ...messageWithoutId
-                }));
+              if (clientUser.rid === user.rid && client.readyState === WebSocket.OPEN) {
+                try {
+                  client.send(JSON.stringify({
+                    type: 'chat',
+                    ...messageWithoutId
+                  }));
+                } catch (err) {
+                  console.error('发送消息失败:', err);
+                }
               }
             }
             break;
@@ -149,8 +139,7 @@ async function init(server) {
               return;
             }
 
-            // 更新消息的已读状态
-            await dbMessages.updateMany(
+            const updateResult = await dbMessages.updateMany(
               {
                 room: reader.rid,
                 timestamp: { $lte: new Date(data.timestamp) },
@@ -160,6 +149,27 @@ async function init(server) {
                 $addToSet: { read_by: reader.uid }
               }
             );
+
+            if (updateResult.modifiedCount > 0) {
+              // 获取更新后的消息
+              const updatedMessages = await dbMessages.find({
+                room: reader.rid,
+                timestamp: { $lte: new Date(data.timestamp) }
+              }).toArray();
+
+              // 广播已读状态更新
+              for (const [client, clientUser] of users.entries()) {
+                if (clientUser.rid === reader.rid && client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify({
+                    type: 'read_status_update',
+                    messages: updatedMessages.map(msg => ({
+                      timestamp: msg.timestamp,
+                      read_by: msg.read_by
+                    }))
+                  }));
+                }
+              }
+            }
             break;
         }
       } catch (err) {
@@ -178,18 +188,6 @@ async function init(server) {
 
     // 处理连接断开
     ws.on('close', () => {
-      const userData = users.get(ws);
-      if (userData) {
-        // 通知房间其他成员用户离开
-        for (const [client, clientUser] of users.entries()) {
-          if (client !== ws && clientUser.rid === userData.rid) {
-            client.send(JSON.stringify({
-              type: 'user_left',
-              uid: userData.uid
-            }));
-          }
-        }
-      }
       clearInterval(heartbeatInterval);
       users.delete(ws);
     });

@@ -17,4 +17,5 @@ server.listen(3000, () => {
   console.log('HTTP 服务器已启动');
 });
 
+// 初始化WebSocket服务
 require('./websocket/socket')(server);
