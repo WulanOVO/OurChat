@@ -23,12 +23,11 @@ function updateAllMessageTimes() {
 }
 
 function startTimeUpdates() {
-  // 清除现有的定时器
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval);
   }
-  // 每分钟更新一次时间显示
-  timeUpdateInterval = setInterval(updateAllMessageTimes, 60000);
+
+  timeUpdateInterval = setInterval(updateAllMessageTimes, 10000);
 }
 
 // 全局函数，用于创建消息元素

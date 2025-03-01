@@ -4,6 +4,7 @@ const connect = require('../db/connection');
 
 async function init(server) {
   const wss = new WebSocket.Server({ server, path: '/ws' });
+  console.log('WebSocket 服务已启动');
 
   const db = await connect();
   const dbRooms = db.collection('rooms');

@@ -28,7 +28,7 @@ router.post('/', async (req, res) => {
       sender: decoded.uid,
       type,
       content,
-      created_at: new Date(),
+      timestamp: new Date(),
       read_by: []
     });
 
