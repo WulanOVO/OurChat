@@ -1,5 +1,10 @@
 const input = document.getElementById('message-input');
 const chatMessages = document.getElementById('chat-messages');
+const sendButton = document.getElementById('send-button');
+const backButton = document.getElementById('back-button');
+const roomDrawer = document.getElementById('room-drawer');
+const overlay = document.getElementById('overlay');
+const closeDrawerBtn = document.getElementById('close-drawer');
 
 let ws = null;
 let reconnectAttempts = 0;
@@ -11,6 +16,24 @@ let currentUser = null;
 let currentRoom = null;
 
 let timeUpdateInterval;
+
+function initDrawer() {
+  backButton.addEventListener('click', openDrawer);
+  closeDrawerBtn.addEventListener('click', closeDrawer);
+  overlay.addEventListener('click', closeDrawer);
+}
+
+function openDrawer() {
+  roomDrawer.classList.add('open');
+  overlay.classList.add('visible');
+  document.body.style.overflow = 'hidden'; // 防止背景滚动
+}
+
+function closeDrawer() {
+  roomDrawer.classList.remove('open');
+  overlay.classList.remove('visible');
+  document.body.style.overflow = '';
+}
 
 function updateAllMessageTimes() {
   const timestamps = document.querySelectorAll('.timestamp');
@@ -30,7 +53,7 @@ function startTimeUpdates() {
   timeUpdateInterval = setInterval(updateAllMessageTimes, 10000);
 }
 
-// 全局函数，用于创建消息元素
+
 function createMessage(message) {
   console.log('创建消息元素:', message);
   const messageDiv = document.createElement('div');
@@ -110,6 +133,7 @@ function sendMessage() {
   }));
 
   input.value = '';
+  input.focus();
 }
 
 function connectWebSocket() {
@@ -146,12 +170,11 @@ function connectWebSocket() {
           currentRoom = data.roomData;
 
           // 更新房间名称
-          const roomNameElements = document.querySelectorAll('.room-name');
-          roomNameElements.forEach(el => {
-            el.textContent = currentRoom.name;
-          });
+          document.querySelector('.room-title').textContent = currentRoom.name;
+          document.querySelector('.room-name').textContent = currentRoom.name;
 
           input.disabled = false;
+          sendButton.disabled = false;
           break;
 
         case 'history':
@@ -212,6 +235,7 @@ function connectWebSocket() {
   ws.onclose = () => {
     console.log('WebSocket连接已断开');
     input.disabled = true;
+    sendButton.disabled = true;
 
     // 清除时间更新定时器
     if (timeUpdateInterval) {
@@ -245,10 +269,36 @@ function findMessageElementByTimestamp(timestamp) {
   return null;
 }
 
+// 键盘高度调整（针对移动设备）
+function handleKeyboard() {
+  // 在iOS上，当键盘弹出时，视窗高度会变化
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  if (isIOS) {
+    window.visualViewport.addEventListener('resize', () => {
+      const messageBox = document.querySelector('.message-input-area');
+      messageBox.style.bottom = `${window.innerHeight - window.visualViewport.height}px`;
+    });
+  }
+
+  // 焦点切换时平滑滚动到底部
+  input.addEventListener('focus', () => {
+    setTimeout(() => {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 300);
+  });
+}
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
+  // 初始化抽屉菜单
+  initDrawer();
+
+  // 处理键盘适配
+  handleKeyboard();
+
   // 绑定发送按钮事件
-  document.querySelector('button').addEventListener('click', sendMessage);
+  sendButton.addEventListener('click', sendMessage);
 
   // 绑定输入框回车事件
   input.addEventListener('keypress', (e) => {
@@ -267,4 +317,11 @@ window.addEventListener('unload', () => {
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval);
   }
+});
+
+// 监听设备方向变化，调整UI
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 300);
 });

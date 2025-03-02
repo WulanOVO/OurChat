@@ -13,7 +13,7 @@ app.use('/api/message', require('./routes/message'));
 app.use('/', express.static('./client'));
 
 const server = http.createServer(app);
-server.listen(80, () => {
+server.listen(3000, () => {
   console.log('HTTP 服务器已启动');
 });
 

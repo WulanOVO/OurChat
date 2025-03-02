@@ -139,9 +139,9 @@ body {
   line-height: 1.5;
   word-wrap: break-word;
   width: 100%;
-  background-color: #e0f0ff;
   color: #333;
   overflow-wrap: break-word;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.05);
 }
 
 .my-message {
