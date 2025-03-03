@@ -6,10 +6,10 @@ const { getNextSequence } = require('../db/counter');
 
 router.post('/', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, inviteCode } = req.body;
 
-    if (!username || !password) {
-      res.status(400).json({ code: 'EMPTY_FIELDS', message: '用户名或密码不能为空' });
+    if (!username || !password || !inviteCode) {
+      res.status(400).json({ code: 'EMPTY_FIELDS', message: '用户名、密码或邀请码不能为空' });
       return;
     }
     if (username.length > 30) {
@@ -23,6 +23,14 @@ router.post('/', async (req, res) => {
 
     const db = await connect();
     const users = db.collection('users');
+    const inviteCodes = db.collection('invite_codes');
+
+    // 验证邀请码
+    const code = await inviteCodes.findOne({ code: inviteCode });
+    if (!code) {
+      res.status(400).json({ code: 'INVALID_INVITE_CODE', message: '无效的邀请码' });
+      return;
+    }
 
     const existingUser = await users.findOne({ username });
     if (existingUser) {
@@ -30,6 +38,7 @@ router.post('/', async (req, res) => {
       return;
     }
 
+    // 创建用户
     await users.insertOne({
       uid: await getNextSequence('user_id'),
       username,
@@ -37,6 +46,9 @@ router.post('/', async (req, res) => {
       password_hash: createHash(password),
       created_at: new Date()
     });
+
+    // 删除已使用的邀请码
+    await inviteCodes.deleteOne({ code: inviteCode });
 
     res.json({ code: 'SUCCESS', message: '注册成功' });
   }

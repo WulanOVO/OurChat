@@ -4,30 +4,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>注册</title>
+  <title>注册 - 简易聊天室</title>
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
   <div class="login-card">
-    <h2>用户注册</h2>
+    <h2>注册账号</h2>
     <form id="register-form">
       <div class="input-group">
         <input type="text" name="username" placeholder="用户名" required>
       </div>
       <div class="input-group">
-        <input type="password" name="password" placeholder="创建密码" required>
+        <input type="password" name="password" placeholder="密码" required>
       </div>
       <div class="input-group">
         <input type="password" name="confirmPassword" placeholder="确认密码" required>
       </div>
-
-      <button type="submit">立即注册</button>
-
-      <div class="login-link">
-        已有账号？<a href="/login">立即登录</a>
+      <div class="input-group">
+        <input type="text" name="inviteCode" placeholder="内测邀请码" required>
       </div>
+      <button type="submit">注册</button>
     </form>
+    <div class="login-link">
+      已有账号？<a href="/login">立即登录</a>
+    </div>
   </div>
 
   <script src="script.js"></script>

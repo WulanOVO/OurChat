@@ -36,7 +36,7 @@ body {
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
 }
 
-.back-button, .room-info-button {
+.back-button {
   background: none;
   border: none;
   color: white;
@@ -50,7 +50,7 @@ body {
   transition: background-color 0.2s;
 }
 
-.back-button:active, .room-info-button:active {
+.back-button:active {
   background-color: rgba(255, 255, 255, 0.2);
 }
 

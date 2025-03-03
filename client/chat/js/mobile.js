@@ -137,7 +137,8 @@ function sendMessage() {
 }
 
 function connectWebSocket() {
-  ws = new WebSocket(`ws://${window.location.host}/ws`);
+  const wsPath = '/ws';  // 与服务器端配置保持一致
+  ws = new WebSocket(`ws://${window.location.host}${wsPath}`);
 
   ws.onopen = () => {
     console.log('WebSocket连接已建立');

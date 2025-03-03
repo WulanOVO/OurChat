@@ -3,7 +3,8 @@ const { verifyToken } = require('../utils/token');
 const connect = require('../db/connection');
 
 async function init(server) {
-  const wss = new WebSocket.Server({ server, path: '/ws' });
+  const wsPath = process.env.WS_PATH || '/ws';
+  const wss = new WebSocket.Server({ server, path: wsPath });
   console.log('WebSocket 服务已启动');
 
   const db = await connect();
