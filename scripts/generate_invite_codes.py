@@ -1,27 +1,20 @@
-import uuid
-import hashlib
+import random
+import string
 import pymongo
 import argparse
 import time
+import os
 from datetime import datetime
 
-MONGODB_URI = "mongodb://localhost:27017/chatroom"
+MONGODB_URI = os.environ.get('MONGODB_URI')
 CODE_LENGTH = 8
 
 def generate_code():
-    timestamp = str(time.time()).encode('utf-8')
-
-    unique_id = uuid.uuid4().hex.encode('utf-8')
-
-    combined = timestamp + unique_id
-    hash_object = hashlib.sha256(combined)
-    hex_dig = hash_object.hexdigest()
-
-    return hex_dig[:CODE_LENGTH]
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=CODE_LENGTH))
 
 def main():
     parser = argparse.ArgumentParser(description='生成内测邀请码')
-    parser.add_argument('-c', '--count', type=int, help='要生成的邀请码数量')
+    parser.add_argument('count', type=int, help='要生成的邀请码数量')
     args = parser.parse_args()
 
     if args.count <= 0:

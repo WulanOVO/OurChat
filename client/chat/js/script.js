@@ -1,5 +1,7 @@
 const input = document.getElementById('message-input');
 const chatMessages = document.getElementById('chat-messages');
+const userNameElement = document.querySelector('.user-name');
+const userAvatarElement = document.querySelector('.user-avatar');
 
 let ws = null;
 let reconnectAttempts = 0;
@@ -145,6 +147,10 @@ function connectWebSocket() {
         case 'user':
           currentUser = data.user;
           currentRoom = data.roomData;
+
+          // 更新用户信息
+          userNameElement.textContent = currentUser.nickname || '未知用户';
+          userAvatarElement.textContent = (currentUser.nickname || '?')[0].toUpperCase();
 
           // 更新房间名称
           const roomNameElements = document.querySelectorAll('.room-name');

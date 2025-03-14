@@ -24,7 +24,7 @@ body {
   box-shadow: 0 8px 20px rgba(0, 123, 255, 0.1);
 }
 
-.room-sidebar {
+.sidebar {
   width: 280px;
   min-width: 280px;
   border-right: 1px solid #e0f0ff;
@@ -36,7 +36,7 @@ body {
   flex-shrink: 0;
 }
 
-.room-sidebar h3 {
+.sidebar h3 {
   padding: 20px;
   color: #1e90ff;
   border-bottom: 1px solid #e0f0ff;
@@ -299,4 +299,58 @@ button:disabled:hover {
 @keyframes fadeOut {
   from { opacity: 1; transform: translate(-50%, 0); }
   to { opacity: 0; transform: translate(-50%, -20px); }
+}
+
+.user-info {
+  padding: 15px;
+  background: #f8f9fa;
+  border-top: 1px solid #e0f0ff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  background: #1e90ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.user-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#user-settings {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background-color: transparent;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+#user-settings:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+#user-settings::before {
+  content: "⚙️";
+  font-size: 16px;
 }
