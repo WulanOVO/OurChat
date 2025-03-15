@@ -24,6 +24,11 @@ router.post('/', async (req, res) => {
     res.json({
       code: 'SUCCESS',
       message: '登录成功',
+      data: {
+        uid: user.uid,
+        username: user.username,
+        nickname: user.nickname
+      },
       token: generateToken({ uid: user.uid }, '7d')
     });
   }

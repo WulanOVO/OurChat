@@ -16,7 +16,12 @@ form.addEventListener("submit", async (event) => {
   const data = await res.json();
 
   if (res.ok) {
+    localStorage.clear();
     localStorage.setItem("token", data.token);
+    localStorage.setItem("uid", data.data.uid);
+    localStorage.setItem("username", data.data.username);
+    localStorage.setItem("nickname", data.data.nickname);
+
     window.location.href = "/chat";
   } else {
     alert(data.message);

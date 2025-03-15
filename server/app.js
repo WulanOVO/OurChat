@@ -14,6 +14,10 @@ app.use('/api/login', require('./routes/login'));
 app.use('/api/room', require('./routes/room'));
 app.use('/api/message', require('./routes/message'));
 
+app.get('/', (req, res) => {
+  res.redirect('/chat');
+});
+
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
