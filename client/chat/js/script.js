@@ -156,11 +156,47 @@ function createMessage(messageData) {
 }
 
 function showError(message) {
-  const errorDiv = document.createElement('div');
-  errorDiv.className = 'error-message';
-  errorDiv.textContent = message;
-  document.body.appendChild(errorDiv);
-  setTimeout(() => errorDiv.remove(), 3000);
+  const $notifications = $('.notifications-container')[0];
+
+  const $error = document.createElement('div');
+  $error.className = 'notification error';
+  $error.textContent = message;
+
+  // 将新消息插入到容器的开头，实现消息从上到下排列
+  if ($notifications.firstChild) {
+    $notifications.insertBefore($error, $notifications.firstChild);
+  } else {
+    $notifications.appendChild($error);
+  }
+
+  // 3秒后自动移除
+  setTimeout(() => {
+    if ($error && $error.parentNode) {
+      $error.remove();
+    }
+  }, 3000);
+}
+
+function showSystemMessage(message) {
+  const $notifications = $('.notifications-container')[0];
+
+  const $systemMessage = document.createElement('div');
+  $systemMessage.className = 'notification system';
+  $systemMessage.textContent = message;
+
+  // 将新消息插入到容器的开头，实现消息从上到下排列
+  if ($notifications.firstChild) {
+    $notifications.insertBefore($systemMessage, $notifications.firstChild);
+  } else {
+    $notifications.appendChild($systemMessage);
+  }
+
+  // 3秒后自动移除系统消息
+  setTimeout(() => {
+    if ($systemMessage && $systemMessage.parentNode) {
+      $systemMessage.remove();
+    }
+  }, 3000);
 }
 
 function showOverlay() {
@@ -322,13 +358,18 @@ function updateMembersList() {
   });
 
   sortedMembers.forEach(member => {
-    const memberItem = document.createElement('div');
-    memberItem.className = 'member-item';
+    const $memberItem = document.createElement('div');
+    $memberItem.className = 'member-item';
 
     // 判断是否为当前用户，当前用户始终显示为在线
     const isCurrentUser = member.uid === uid;
-    // 其他用户根据userDetailsMap中的状态判断
-    const isOnline = isCurrentUser ? true : userDetailsMap[member.uid]?.online || false;
+    let isOnline = false;
+    if (
+      isCurrentUser ||
+      userDetailsMap[member.uid]?.online
+    ) {
+      isOnline = true;
+    }
 
     if (isOnline) {
       onlineCount++;
@@ -337,7 +378,7 @@ function updateMembersList() {
     const statusText = isOnline ? '在线' : '离线';
     const statusClass = isOnline ? 'online' : 'offline';
 
-    memberItem.innerHTML = `
+    $memberItem.innerHTML = `
       <div class="member-avatar">${member.nickname[0]}</div>
       <div class="member-info">
         <div class="member-nickname">${escapeHtml(member.nickname)}${isCurrentUser ? ' (我)' : ''}</div>
@@ -345,13 +386,13 @@ function updateMembersList() {
       </div>
     `;
 
-    $roomMembersList.appendChild(memberItem);
+    $roomMembersList.appendChild($memberItem);
   });
 
   // 更新在线人数显示
-  const $memberCountHeader = $('#room-info-panel .room-members-section h4')[0];
-  if ($memberCountHeader) {
-    $memberCountHeader.textContent = `群组成员 (${onlineCount}/${roomData.members.length} 在线)`;
+  const $memberCount = $('.member-count')[0];
+  if ($memberCount) {
+    $memberCount.textContent = `${onlineCount}/${roomData.members.length}`;
   }
 }
 
@@ -438,9 +479,7 @@ function connectWebSocket() {
   ws = null;
 
   const $chatMessages = $('#chat-messages');
-  $chatMessages.innerHTML = `
-    <div class="system-message">正在连接到聊天服务器...</div>
-  `;
+  $chatMessages.innerHTML = '';
 
   ws = new WebSocket(`ws://${window.location.host}/ws`);
 
@@ -452,6 +491,7 @@ function connectWebSocket() {
       case 'history': wsOnHistory(data); break;
       case 'chat': wsOnChat(data); break;
       case 'updateRead': wsOnUpdateRead(data); break;
+      case 'userStatus': wsOnUserStatus(data); break;
       case 'error': showError(data.message); break;
     }
   };
@@ -480,7 +520,14 @@ function wsOnRoom(data) {
   console.log('wsOnRoom', data);
   roomData = data.data;
 
+  roomData.members.forEach(member => {
+    const { uid, ...rest } = member;
+    userDetailsMap[uid] = rest;
+  });
+
   $('.room-title')[0].textContent = roomData.name;
+
+  updateMembersList();
 }
 
 function wsOnHistory(data) {
@@ -528,6 +575,30 @@ function wsOnUpdateRead(data) {
       updateReadStatus(messageElement, msg.read_by);
     }
   });
+}
+
+// 处理用户状态更新
+function wsOnUserStatus(data) {
+  console.log('wsOnUserStatus', data);
+  const { uid, online } = data.data;
+
+  // 更新用户状态映射
+  if (!userDetailsMap[uid]) {
+    userDetailsMap[uid] = {};
+  }
+  userDetailsMap[uid].online = online;
+
+  // 更新UI显示
+  updateMembersList();
+
+  // 显示系统通知
+  if (roomData.members) {
+    const member = roomData.members.find(m => m.uid === uid);
+    if (member) {
+      const statusText = online ? '上线了' : '离线了';
+      showSystemMessage(`${member.nickname} ${statusText}`);
+    }
+  }
 }
 
 function wsOnError(error) {

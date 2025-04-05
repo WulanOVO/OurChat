@@ -30,7 +30,6 @@ body {
   min-width: 280px;
   border-right: 1px solid #e0f0ff;
   background: white;
-  border-radius: 12px 0 0 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -103,7 +102,6 @@ body {
   flex: 1;
   min-width: 0;
   height: 100%;
-  border-radius: 0 12px 12px 0;
   box-shadow: none;
   width: auto;
   display: flex;
@@ -310,28 +308,50 @@ button:disabled:hover {
   color: #666;
 }
 
-.error-message {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #ff4d4f;
-  color: white;
+/* 通知样式 */
+.notification {
+  position: relative;
   padding: 10px 20px;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  max-width: 300px;
+  text-align: center;
+  margin-bottom: 10px;
+  animation: fadeInRight 0.3s, fadeOutRight 0.3s 2.7s;
+}
+
+.notification.error {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+.notification.system {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.notifications-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   z-index: 1000;
-  animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+  max-height: 30vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translate(-50%, -20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes fadeOut {
-  from { opacity: 1; transform: translate(-50%, 0); }
-  to { opacity: 0; transform: translate(-50%, -20px); }
+@keyframes fadeOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(20px); }
 }
 
 .user-info {
@@ -560,12 +580,14 @@ button:disabled:hover {
 
 .empty-subtext {
   font-size: 14px;
-  color: #999;
+  color: #777;
+  margin-top: 5px;
 }
 
 .empty-room-state {
   height: auto;
   min-height: 200px;
+  margin-top: 40px;
 }
 
 .empty-chat-state {

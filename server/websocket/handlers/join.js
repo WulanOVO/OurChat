@@ -7,7 +7,7 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
   if (!decoded) {
     ws.send(JSON.stringify({ type: 'error', message: '未授权的访问' }));
     ws.close();
-    return;
+    return null;
   }
 
   const room = await dbRooms.findOne({ rid });
@@ -15,7 +15,7 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
   if (!room) {
     ws.send(JSON.stringify({ type: 'error', message: '房间不存在' }));
     ws.close();
-    return;
+    return null;
   }
 
   const userData = room.members.find(member => member.uid === decoded.uid);
@@ -23,10 +23,11 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
   if (!userData) {
     ws.send(JSON.stringify({ type: 'error', message: '你没有权限进入该房间' }));
     ws.close();
-    return;
+    return null;
   }
 
-  users.set(ws, { rid, ...userData });
+  const userInfo = { rid, ...userData };
+  users.set(ws, userInfo);
 
   const onlineUsers = new Set();
   for (const [_, user] of users.entries()) {

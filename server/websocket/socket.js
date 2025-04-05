@@ -14,8 +14,12 @@ async function init(server) {
   const dbMessages = db.collection('messages');
 
   const users = new Map();
+  const roomUsers = new Map();
 
   wss.on('connection', async (ws) => {
+    let userData = null;
+    let currentRoom = null;
+
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message);
@@ -43,9 +47,39 @@ async function init(server) {
     });
 
     ws.on('close', () => {
+      if (userData && currentRoom) {
+        if (roomUsers.has(currentRoom)) {
+          roomUsers.get(currentRoom).delete(userData.uid);
+
+          if (roomUsers.get(currentRoom).size === 0) {
+            roomUsers.delete(currentRoom);
+          }
+        }
+
+        broadcastUserStatus(currentRoom, userData.uid, false, users, roomUsers);
+      }
+
       users.delete(ws);
     });
   });
+
+  function broadcastUserStatus(roomId, userId, isOnline, users, roomUsers) {
+    if (!roomUsers.has(roomId)) return;
+
+    for (const [ws, user] of users.entries()) {
+      if (user.uid === userId) continue;
+
+      if (user.rid === roomId) {
+        ws.send(JSON.stringify({
+          type: 'userStatus',
+          data: {
+            uid: userId,
+            online: isOnline
+          }
+        }));
+      }
+    }
+  }
 }
 
 module.exports = init;

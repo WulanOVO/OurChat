@@ -1,735 +1,165 @@
-* {
-  margin: 0;
+/* 基础布局调整 */
+body.mobile {
   padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: #f0f8ff;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-  position: fixed;
-}
-
-.mobile-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100vw;
-  background-color: white;
-  position: relative;
-}
-
-/* 顶部导航 */
-.chat-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  background-color: #1e90ff;
-  color: white;
-  height: 60px;
-  width: 100%;
-  position: relative;
-  z-index: 2;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
-}
-
-.back-button {
-  background: none;
-  border: none;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.back-button:active {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.room-title {
-  flex: 1;
-  margin: 0 10px;
-  font-size: 18px;
-  font-weight: 500;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 消息区域 */
-main {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-
-.chat-messages {
-  height: 100%;
-  width: 100%;
-  overflow-y: auto;
-  padding: 16px;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  background-color: #f0f8ff;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 消息样式 */
-.message {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  margin: 0 0 16px;
-  max-width: 80%;
-  clear: both;
-  word-break: break-word;
-}
-
-.message .username {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 4px;
-}
-
-.message .content {
-  padding: 12px 16px;
-  border-radius: 16px;
-  line-height: 1.5;
-  word-wrap: break-word;
-  width: 100%;
-  color: #333;
-  overflow-wrap: break-word;
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.05);
-}
-
-.my-message {
-  align-self: flex-end;
-}
-
-.my-message .username {
-  align-self: flex-end;
-}
-
-.my-message .content {
-  background-color: #1e90ff;
-  color: white;
-  border-top-right-radius: 4px;
-  align-self: flex-end;
-}
-
-.other-message {
-  align-self: flex-start;
-}
-
-.other-message .content {
-  background-color: #ffffff;
-  color: #333;
-  border-top-left-radius: 4px;
-}
-
-.message-info {
-  font-size: 11px;
-  color: #999;
-  margin-top: 4px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.my-message .message-info {
-  text-align: right;
-}
-
-.timestamp {
-  margin-right: 8px;
-}
-
-.read-status {
-  font-size: 11px;
-  color: #999;
-  cursor: pointer;
-}
-
-/* 消息输入区域 */
-.message-input-area {
-  padding: 10px;
-  background-color: white;
-  border-top: 1px solid #e0f0ff;
-  width: 100%;
-  position: relative;
-  z-index: 2;
-}
-
-.message-box {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-#message-input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #e0f0ff;
-  border-radius: 20px;
-  outline: none;
-  font-size: 16px;
-  background-color: #f5f5f5;
-  height: 42px;
-}
-
-#message-input:focus {
-  border-color: #1e90ff;
-  background-color: white;
-}
-
-#send-button {
-  width: 64px;
-  height: 42px;
-  background-color: #1e90ff;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.3s;
-}
-
-#send-button:hover {
-  background-color: #0066cc;
-}
-
-#send-button:disabled {
-  background-color: #b3d9ff;
-  cursor: not-allowed;
-}
-
-
-.room-drawer {
-  position: fixed;
-  top: 0;
-  left: -280px;
-  height: 100vh;
-  width: 280px;
-  background-color: white;
-  z-index: 1000;
-  box-shadow: 3px 0 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease-out;
-  display: flex;
-  flex-direction: column;
-}
-
-.room-drawer.open {
-  transform: translateX(280px);
-}
-
-.drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 16px;
-  border-bottom: 1px solid #e0f0ff;
-}
-
-.drawer-header h3 {
   margin: 0;
-  color: #1e90ff;
-}
-
-#close-drawer {
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.room-list {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.room-item {
-  display: flex;
-  padding: 15px;
-  border-bottom: 1px solid #f5f5f5;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  align-items: center;
-  gap: 12px;
-}
-
-.room-item:active {
-  background-color: #f0f8ff;
-}
-
-.room-item.active {
-  background-color: #e0f0ff;
-}
-
-.room-avatar {
-  width: 40px;
-  height: 40px;
-  background: #1e90ff;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-}
-
-.room-info {
-  flex: 1;
+  height: 100%;
   overflow: hidden;
 }
 
-.room-name {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 4px;
+.mobile .app-container {
+  width: 100%;
+  height: 100vh;
+  max-width: 100%;
+  border-radius: 0;
+  flex-direction: column;
 }
 
-.room-last-message {
-  font-size: 12px;
-  color: #666;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 遮罩层样式 */
-.overlay {
+/* 侧边栏全屏 */
+.mobile .sidebar {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 20;
-  display: none;
-}
-
-.overlay.visible {
-  display: block;
-}
-
-/* 错误提示 */
-.error-message {
-  position: fixed;
-  top: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #ff4d4f;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  max-width: 90%;
-  text-align: center;
-  animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; transform: translate(-50%, 0); }
-  to { opacity: 0; transform: translate(-50%, -20px); }
-}
-
-/* 滚动条样式 */
-.chat-messages::-webkit-scrollbar,
-.room-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.chat-messages::-webkit-scrollbar-track,
-.room-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.chat-messages::-webkit-scrollbar-thumb,
-.room-list::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 2px;
-}
-
-/* 自适应样式 */
-@media (orientation: landscape) {
-  .chat-header {
-    height: 50px;
-    padding: 5px 16px;
-  }
-
-  .message-input-area {
-    padding: 5px 10px;
-  }
-}
-
-/* 已读用户弹窗样式 */
-.read-users-popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 30;
-  width: 90%;
-  max-width: 320px;
-}
-
-.popup-content {
-  background-color: white;
-  border-radius: 12px;
   width: 100%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.popup-header {
-  padding: 16px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.popup-header h3 {
-  margin: 0;
-  font-size: 16px;
-  color: #333;
-  padding: 0;
-  border: none;
-}
-
-.close-popup {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #999;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-.popup-body {
-  padding: 16px;
-}
-
-.read-user {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.read-user:last-child {
-  border-bottom: none;
-}
-
-.read-user .user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #e0e0e0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-  font-weight: bold;
-  color: #666;
-}
-
-.read-user .user-name {
-  color: #333;
-  font-size: 14px;
-}
-
-.system-message {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 10px 16px;
-  border-radius: 8px;
-  text-align: center;
-  color: #666;
-  margin: 16px auto;
-  max-width: 80%;
-  font-size: 14px;
-}
-
-/* 在线状态样式 */
-.member-status {
-  font-size: 12px;
-  margin-top: 2px;
-  display: flex;
-  align-items: center;
-}
-
-.member-status::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 5px;
-}
-
-.member-status.online {
-  color: #4CAF50;
-}
-
-.member-status.online::before {
-  background-color: #4CAF50;
-}
-
-.member-status.offline {
-  color: #9e9e9e;
-}
-
-.member-status.offline::before {
-  background-color: #9e9e9e;
-}
-
-/* 成员列表样式优化 */
-.member-item {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.member-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: #3498db;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  margin-right: 10px;
-}
-
-.member-info {
-  flex: 1;
-}
-
-.member-nickname {
-  font-weight: bold;
-}
-
-/* 临时消息样式 */
-.temp-message {
-  opacity: 0.7;
-}
-
-.temp-message::after {
-  content: "发送中...";
-  font-size: 12px;
-  color: #999;
-  display: block;
-  text-align: right;
-  margin-top: 4px;
-}
-
-/* 空状态样式 */
-.empty-room-state, .empty-chat-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  text-align: center;
-  height: 100%;
-  color: #666;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.empty-text {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-
-.empty-subtext {
-  font-size: 14px;
-  color: #999;
-}
-
-.empty-room-state {
-  height: auto;
-  min-height: 150px;
-}
-
-.empty-chat-state {
-  min-height: 300px;
-}
-
-/* 群组详情页样式 */
-.room-info-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #fff;
-  padding: 5px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.room-info-panel {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: white;
-  z-index: 1001;
-  transform: translateX(100%);
+  border-radius: 0;
+  transform: translateX(-100%);
   transition: transform 0.3s ease;
-  display: flex;
-  flex-direction: column;
+  z-index: 30;
 }
 
-.room-info-panel.open {
+.mobile .chat-header {
+  background-color: #1e90ff;
+}
+
+.mobile .room-title {
+  color: #fff;
+  text-align: center;
+}
+
+.mobile .sidebar.active {
   transform: translateX(0);
 }
 
-.room-info-header {
+.sidebar-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #4caf50;
-  color: white;
+  padding: 0 10px 0 0;
 }
 
-.room-info-header h3 {
-  flex-grow: 1;
-  margin: 0;
-  text-align: center;
+/* 聊天区域适配 */
+.mobile .chat-container {
+  flex: 1;
+  width: 100%;
+  border-radius: 0;
 }
 
-.close-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: white;
+.chat-header {
+  padding: 10px 15px;
+}
+
+.toggle-sidebar-button {
+  background: transparent;
   padding: 5px;
   border-radius: 50%;
+  margin-right: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.room-info-content {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: 15px;
+.toggle-sidebar-button:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
-.room-info-avatar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 20px;
+/* 消息框调整 */
+.mobile .message-box {
+  padding: 10px;
 }
 
-.room-avatar.large {
-  width: 80px;
-  height: 80px;
-  font-size: 32px;
-  margin-bottom: 10px;
-}
-
-.room-name-display {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.room-members-section h4 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.room-members-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.member-item {
-  display: flex;
-  align-items: center;
+.mobile #message-input {
   padding: 8px;
-  border-radius: 5px;
+  font-size: 14px;
 }
 
-.member-item:hover {
+.mobile #send-message-btn {
+  padding: 8px 16px;
+}
+
+/* 消息大小调整 */
+.mobile .message {
+  max-width: 85%;
+}
+
+.mobile .room-info-button {
+  color: #fff;
+}
+
+/* 群组信息面板 */
+.mobile .room-info-panel {
+  width: 100%;
+  transform: translateX(100%);
+}
+
+.mobile .room-info-panel.open {
+  transform: translateX(0);
+}
+
+.mobile .read-users-popup {
+  width: 95vw;
+}
+
+.mobile .popup-content {
+  width: 90%;
+  max-height: 70%;
+  border-radius: 12px;
+  margin: 0 auto;
+  overflow: hidden; /* 确保内容不会溢出 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 增强阴影效果 */
+}
+
+.mobile .popup-header {
+  padding: 12px;
   background-color: #f5f5f5;
 }
 
-.member-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: #4caf50;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  margin-right: 10px;
+.mobile .popup-body {
+  max-height: calc(70vh - 50px); /* 减去header高度 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* 提升移动端滚动体验 */
 }
 
-.member-info {
-  flex-grow: 1;
+.mobile .read-user {
+  padding: 10px 0;
 }
 
-.member-nickname {
-  font-weight: bold;
+.mobile .read-user .user-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
 }
 
-.member-status {
-  font-size: 12px;
-  color: #999;
-  display: flex;
-  align-items: center;
+.mobile .read-user .user-name {
+  font-size: 16px;
 }
 
-.member-status.online::before {
-  content: "";
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #4caf50;
-  margin-right: 5px;
+.mobile .close-popup {
+  padding: 8px;
+  font-size: 20px;
 }
 
-.member-status.offline::before {
-  content: "";
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #999;
-  margin-right: 5px;
+/* 通知样式调整 */
+.mobile .notifications-container {
+  width: 90%;
+  left: 5%;
+}
+
+/* 遮罩层调整 */
+.mobile .overlay {
+  z-index: 25;
+}
+
+/* 用户信息区域调整 */
+.mobile .user-info {
+  padding: 15px 10px;
 }
