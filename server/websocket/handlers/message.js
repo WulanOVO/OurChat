@@ -7,7 +7,6 @@ async function handleMessage(ws, data, users, dbMessages) {
     return;
   }
 
-  // 消息格式验证
   if (!data.content || typeof data.content !== 'string') {
     ws.send(JSON.stringify({ type: 'error', message: '消息格式不正确' }));
     return;
@@ -34,14 +33,19 @@ async function handleMessage(ws, data, users, dbMessages) {
     return;
   }
 
-  // 广播消息给同一房间的所有用户
-  const { _id, ...messageWithoutId } = newMessage;
+  const messageData = {
+    ...newMessage,
+    timestamp: Math.floor(newMessage.timestamp.getTime() / 1000)
+  };
+  delete messageData._id;
+  delete messageData.room;
+
   for (const [client, clientUser] of users.entries()) {
     if (clientUser.rid === user.rid && client.readyState === WebSocket.OPEN) {
       try {
         client.send(JSON.stringify({
           type: 'chat',
-          ...messageWithoutId
+          data: messageData
         }));
       } catch (err) {
         console.error('发送消息失败:', err);

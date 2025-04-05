@@ -17,9 +17,11 @@ router.get('/', async (req, res) => {
     const db = await connect();
     const rooms = db.collection('rooms');
 
-    const roomsList = await rooms.find({ 'members.uid': uid }).toArray();
+    const roomList = await rooms.find({ 'members.uid': uid }).toArray();
+    // 排除_id字段
+    roomList.forEach(room => delete room._id);
 
-    res.status(200).json({ code: 'SUCCESS', message: '获取房间列表成功', data: roomsList });
+    res.status(200).json({ code: 'SUCCESS', message: '获取房间列表成功', data: roomList });
   }
   catch (err) {
     console.error(err);

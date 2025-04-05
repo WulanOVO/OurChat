@@ -3,7 +3,6 @@ const connect = require('../db/connection');
 const handleJoin = require('./handlers/join');
 const handleMessage = require('./handlers/message');
 const handleRead = require('./handlers/read');
-const setupHeartbeat = require('./utils/heartbeat');
 
 async function init(server) {
   const wsPath = process.env.WS_PATH || '/ws';
@@ -14,12 +13,9 @@ async function init(server) {
   const dbRooms = db.collection('rooms');
   const dbMessages = db.collection('messages');
 
-  // 存储在线用户的WebSocket连接
   const users = new Map();
 
   wss.on('connection', async (ws) => {
-    setupHeartbeat(ws);
-
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message);

@@ -28,35 +28,44 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
 
   users.set(ws, { rid, ...userData });
 
-  // 创建一个包含所有用户详细信息的映射表
-  const userDetailsMap = {};
-  room.members.forEach(member => {
-    userDetailsMap[member.uid] = {
-      uid: member.uid,
-      nickname: member.nickname || '未知用户'
-    };
-  });
+  const onlineUsers = new Set();
+  for (const [_, user] of users.entries()) {
+    if (user.rid === rid) {
+      onlineUsers.add(user.uid);
+    }
+  }
 
-  // 发送用户信息和房间信息，包含用户详细信息映射表
+  const membersWithOnlineStatus = room.members.map(member => ({
+    ...member,
+    online: onlineUsers.has(member.uid) || member.uid === userData.uid // 当前用户或已连接的用户标记为在线
+  }));
+
+  const roomData = {
+    ...room,
+    members: membersWithOnlineStatus
+  };
+  delete roomData._id;
+  delete roomData.rid;
+
   ws.send(JSON.stringify({
-    type: 'user',
-    user: userData,
-    roomData: {
-      rid: room.rid,
-      name: room.name,
-      members: room.members
-    },
-    userDetailsMap: userDetailsMap
+    type: 'room',
+    data: roomData
   }));
 
   const messages = await dbMessages.find({ room: rid })
     .sort({ timestamp: -1 })
     .limit(50)
     .toArray();
+  messages.forEach(message => {
+    delete message._id;
+    delete message.room;
+    message.timestamp = Math.floor(message.timestamp.getTime() / 1000);
+  });
+  messages.reverse();
 
   ws.send(JSON.stringify({
     type: 'history',
-    messages: messages.map(({ _id, ...rest }) => rest).reverse()
+    data: messages
   }));
 }
 

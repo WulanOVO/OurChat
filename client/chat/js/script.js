@@ -1,233 +1,69 @@
-// 声明变量
-let inputElement;
-let messagesElement;
-let nicknameElement;
-let userAvatarElement;
+'use strict';
+
+let elementCache = {};
+
+function $(selector, useCache = true) {
+  if (useCache && elementCache[selector]) {
+    return elementCache[selector];
+  }
+
+  const elements = document.querySelectorAll(selector);
+  if (elements.length === 0) {
+    return null;
+  }
+
+  if (
+    elements.length === 1 &&
+    selector.indexOf('.') === -1
+  ) {
+    if (useCache) elementCache[selector] = elements[0];
+    return elements[0];
+  }
+
+  if (useCache) elementCache[selector] = elements;
+
+  return elements;
+}
 
 const token = localStorage.getItem('token');
 if (!token) {
   window.location.href = '/login';
 }
+const uid = parseInt(localStorage.getItem('uid'));
+const nickname = localStorage.getItem('nickname');
+const lastRoomId = parseInt(localStorage.getItem('lastRoomId'));
+let currentRoomId = lastRoomId;
 
-let ws = null;
-let reconnectAttempts = 0;
-const maxReconnectAttempts = 5;
-const reconnectDelay = 3000;
-
-let currentUser = null;
-let currentRoom = null;
-let userDetailsMap = {}; // 添加用户详情映射表
-let userRooms = []; // 存储用户的房间列表
-let currentRoomId = null; // 当前选中的房间ID
-let isConnecting = false; // 标记是否正在连接WebSocket
-
-let timeUpdateInterval;
-
-// 初始化DOM元素引用
-function initDOMElements() {
-  inputElement = document.getElementById('message-input');
-  messagesElement = document.getElementById('chat-messages');
-  nicknameElement = document.querySelector('.user-nickname');
-  userAvatarElement = document.querySelector('.user-avatar');
-
-  // 设置用户信息
-  if (nicknameElement) {
-    nicknameElement.textContent = localStorage.getItem('nickname');
+function escapeHtml(unsafe) {
+  if (typeof unsafe !== 'string') {
+    return '';
   }
-
-  if (userAvatarElement) {
-    userAvatarElement.textContent = localStorage.getItem('nickname')[0];
-  }
-}
-
-// 获取用户的房间列表
-async function fetchRooms() {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = '/login';
-      return;
-    }
-
-    const response = await fetch('/api/room', {
-      headers: {
-        'Authorization': token
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('获取房间列表失败');
-    }
-
-    const result = await response.json();
-    if (result.code === 'SUCCESS') {
-      userRooms = result.data;
-
-      // 如果有房间
-      if (userRooms.length > 0) {
-        // 尝试从localStorage获取上次选择的房间ID
-        const savedRoomId = parseInt(localStorage.getItem('lastRoomId'));
-
-        // 检查保存的房间ID是否仍然有效
-        const roomExists = userRooms.some(room => room.rid === savedRoomId);
-
-        if (roomExists) {
-          currentRoomId = savedRoomId;
-        } else {
-          currentRoomId = userRooms[0].rid;
-        }
-
-        updateRoomList();
-        connectWebSocket();
-      } else {
-        // 没有可用房间时，显示提示信息而不是报错
-        updateRoomListWithEmptyState();
-        showEmptyStateInChat();
-      }
-    } else {
-      throw new Error(result.message || '获取房间列表失败');
-    }
-  } catch (error) {
-    console.error('获取房间列表错误:', error);
-    showError(error.message);
-  }
-}
-
-// 更新房间列表UI
-function updateRoomList() {
-  const roomListElement = document.querySelector('.room-list');
-  if (!roomListElement) return;
-
-  roomListElement.innerHTML = '';
-
-  userRooms.forEach(room => {
-    const roomElement = document.createElement('div');
-    roomElement.className = `room-item ${room.rid === currentRoomId ? 'active' : ''}`;
-    roomElement.dataset.rid = room.rid;
-
-    roomElement.innerHTML = `
-      <div class="room-avatar">${room.name[0]}</div>
-      <div class="room-info">
-        <div class="room-name">${escapeHtml(room.name)}</div>
-        <div class="room-last-message">点击进入聊天</div>
-      </div>
-    `;
-
-    roomElement.addEventListener('click', () => {
-      switchRoom(room.rid);
-    });
-
-    roomListElement.appendChild(roomElement);
-  });
-}
-
-// 在房间列表中显示空状态提示
-function updateRoomListWithEmptyState() {
-  const roomListElement = document.querySelector('.room-list');
-  if (!roomListElement) return;
-
-  roomListElement.innerHTML = `
-    <div class="empty-room-state">
-      <div class="empty-icon">📭</div>
-      <div class="empty-text">没有可用的聊天房间</div>
-      <div class="empty-subtext">请联系管理员创建房间</div>
-    </div>
-  `;
-}
-
-// 在聊天区域显示空状态提示
-function showEmptyStateInChat() {
-  if (!messagesElement) return;
-
-  messagesElement.innerHTML = `
-    <div class="empty-chat-state">
-      <div class="empty-icon">💬</div>
-      <div class="empty-text">没有可用的聊天房间</div>
-      <div class="empty-subtext">请联系管理员创建房间</div>
-    </div>
-  `;
-
-  // 禁用输入框
-  if (inputElement) {
-    inputElement.disabled = true;
-    inputElement.placeholder = '没有可用的聊天房间';
-  }
-}
-
-function updateAllMessageTimes() {
-  const timestamps = document.querySelectorAll('.timestamp');
-  timestamps.forEach(element => {
-    const timestamp = element.dataset.timestamp;
-    if (timestamp) {
-      element.textContent = formatTime(timestamp);
-    }
-  });
-}
-
-function startTimeUpdates() {
-  if (timeUpdateInterval) {
-    clearInterval(timeUpdateInterval);
-  }
-
-  timeUpdateInterval = setInterval(updateAllMessageTimes, 10000);
-}
-
-function createMessage(message) {
-  const messageDiv = document.createElement('div');
-
-  // 确保消息数据格式正确
-  if (!message || !message.sender) {
-    console.error('消息数据格式不正确:', message);
-    return messageDiv;
-  }
-
-  const isMyMessage = message.sender === currentUser?.uid;
-  messageDiv.className = `message ${isMyMessage ? 'my-message' : 'other-message'}`;
-
-  const senderInfo = currentRoom?.members.find(m => m.uid === message.sender);
-  const displayName = senderInfo?.nickname || '未知用户';
-
-  messageDiv.innerHTML = `
-    <div class="username">${escapeHtml(displayName)}</div>
-    <div class="content">${escapeHtml(message.content)}</div>
-    <div class="message-info">
-      <span class="timestamp" data-timestamp="${message.timestamp}">${formatTime(message.timestamp)}</span>
-      <span class="read-status" data-read-by='${JSON.stringify(message.read_by || [])}'>${message.read_by?.length || 1}人已读</span>
-    </div>
-  `;
-
-  // 添加点击事件监听器
-  const readStatusElement = messageDiv.querySelector('.read-status');
-  if (readStatusElement) {
-    readStatusElement.addEventListener('click', () => {
-      const readByIds = JSON.parse(readStatusElement.dataset.readBy);
-      // 使用用户详情映射表转换ID为用户详情
-      const readByDetails = readByIds.map(uid => userDetailsMap[uid] || { uid, nickname: '未知用户' });
-      showReadUsers(readByDetails);
-    });
-  }
-
-  return messageDiv;
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function formatTime(timestamp) {
-  const date = new Date(timestamp);
+  const date = new Date(timestamp * 1000);
   const now = new Date();
   const diff = now - date;
 
-  if (diff < 60000) {
+  if (diff < 60 * 1000) {
     // 小于1分钟
     return '刚刚';
   }
-  else if (diff < 3600000) {
+  else if (diff < 3600 * 1000) {
     // 小于1小时
-    return `${Math.floor(diff / 60000)}分钟前`;
+    return `${Math.floor(diff / 60 / 1000)}分钟前`;
   }
   else if (date.getDate() === now.getDate()) {
     // 同一天
     return date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
   }
-  else if (now - date < 86400000 * 7) {
+  else if (now - date < 86400 * 7 * 1000) {
     // 一周内
     const days = ['日', '一', '二', '三', '四', '五', '六'];
     return `周${days[date.getDay()]} ${date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' })}`;
@@ -242,16 +78,81 @@ function formatTime(timestamp) {
   }
 }
 
-function escapeHtml(unsafe) {
-  if (typeof unsafe !== 'string') {
-    return '';
+async function fetchRooms() {
+  const response = await fetch('/api/room', {
+    headers: {
+      'Authorization': token
+    }
+  });
+
+  const data = await response.json();
+  if (data.code === 'SUCCESS') {
+    return data.data;
+  } else if (data.code === 'UNAUTHORIZED') {
+    window.location.href = '/login';
+  } else {
+    throw new Error(data.message);
   }
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+}
+
+function updateRoomList(rooms) {
+  const $roomList = $('.room-list')[0];
+  $roomList.innerHTML = '';
+
+  if (rooms.length === 0) {
+    showEmptyStateInChat();
+    return;
+  }
+
+  rooms.forEach(room => {
+    const $room = document.createElement('div');
+    $room.className = `room-item ${room.rid === currentRoomId ? 'active' : ''}`;
+    $room.dataset.rid = room.rid;
+
+    $room.innerHTML = `
+      <div class="room-avatar">${room.name[0]}</div>
+      <div class="room-info">
+        <div class="room-name">${escapeHtml(room.name)}</div>
+        <div class="room-last-message">点击进入聊天</div>
+      </div>
+    `;
+
+    $room.addEventListener('click', () => {
+      switchRoom(room.rid);
+    });
+
+    $roomList.appendChild($room);
+  });
+}
+
+function createMessage(messageData) {
+  const isMyMessage = messageData.sender === uid;
+
+  const $message = document.createElement('div');
+  $message.className = `message ${isMyMessage ? 'my-message' : 'other-message'}`;
+
+  const senderInfo = roomData.members?.find(m => m.uid === messageData.sender);
+  const displayName = senderInfo?.nickname || '未知用户';
+
+  $message.innerHTML = `
+    <div class="username">${escapeHtml(displayName)}</div>
+    <div class="content">${escapeHtml(messageData.content)}</div>
+    <div class="message-info">
+      <span class="timestamp" data-timestamp="${messageData.timestamp}">${formatTime(messageData.timestamp)}</span>
+      <span class="read-status" data-read-by='${JSON.stringify(messageData.read_by || [])}'>${messageData.read_by?.length || 1}人已读</span>
+    </div>
+  `;
+
+  // 添加已读用户点击事件
+  const $readStatus = $message.querySelector('.read-status');
+  if ($readStatus) {
+    $readStatus.addEventListener('click', () => {
+      const readByIds = JSON.parse($readStatus.dataset.readBy);
+      showReadUsers(readByIds);
+    });
+  }
+
+  return $message;
 }
 
 function showError(message) {
@@ -262,263 +163,67 @@ function showError(message) {
   setTimeout(() => errorDiv.remove(), 3000);
 }
 
-function sendMessage() {
-  if (!inputElement) return;
-
-  const content = inputElement.value.trim();
-  if (!content || !currentUser || !ws || ws.readyState !== WebSocket.OPEN) {
-    if (!content) {
-      console.log('消息内容为空，不发送');
-    } else if (!currentUser) {
-      console.log('用户未登录，不发送');
-      showError('请先登录');
-    } else if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket未连接，不发送');
-      showError('连接已断开，请刷新页面');
-    }
-    return;
-  }
-
-  // 创建一个临时消息，立即显示在界面上
-  const tempMessage = {
-    sender: currentUser.uid,
-    content: content,
-    content_type: 'text',
-    timestamp: new Date(),
-    read_by: [currentUser.uid],
-    isTemp: true // 标记为临时消息
-  };
-
-  // 添加临时消息到界面
-  const tempElement = createMessage(tempMessage);
-  tempElement.classList.add('temp-message');
-  messagesElement.appendChild(tempElement);
-  messagesElement.scrollTop = messagesElement.scrollHeight;
-
-  // 发送消息到服务器
-  try {
-    ws.send(JSON.stringify({
-      type: 'message',
-      content
-    }));
-
-    // 清空输入框
-    inputElement.value = '';
-  } catch (err) {
-    console.error('发送消息失败:', err);
-    showError('发送消息失败，请重试');
-
-    // 移除临时消息
-    tempElement.remove();
+function showOverlay() {
+  const $overlay = $('#overlay');
+  if ($overlay) {
+    $overlay.classList.add('visible');
   }
 }
 
-function connectWebSocket() {
-  // 如果已经在连接中，则不重复连接
-  if (isConnecting || !messagesElement) return;
-  isConnecting = true;
-
-  // 清理之前的WebSocket连接
-  if (ws) {
-    // 关闭之前的连接前先移除事件监听器，防止重复触发事件
-    const oldWs = ws;
-    ws = null;
-
-    if (inputElement) {
-      inputElement.disabled = true;
-    }
-
-    try {
-      oldWs.onclose = null; // 移除onclose监听器，防止自动重连
-      oldWs.onmessage = null; // 移除onmessage监听器
-      oldWs.onerror = null; // 移除onerror监听器
-      oldWs.close();
-    } catch (err) {
-      console.error('关闭旧连接失败:', err);
-    }
-  }
-
-  // 在连接新WebSocket前清空消息区域
-  messagesElement.innerHTML = '';
-
-  // 添加连接中提示
-  const loadingMessage = document.createElement('div');
-  loadingMessage.className = 'system-message';
-  loadingMessage.textContent = '正在连接到聊天服务器...';
-  messagesElement.appendChild(loadingMessage);
-
-  const wsPath = '/ws';
-  ws = new WebSocket(`ws://${window.location.host}${wsPath}`);
-
-  ws.onopen = () => {
-    isConnecting = false;
-    reconnectAttempts = 0;
-
-    // 清除连接中提示
-    messagesElement.innerHTML = '';
-
-    // 保存当前选择的房间ID
-    localStorage.setItem('lastRoomId', currentRoomId);
-
-    ws.send(JSON.stringify({
-      type: 'join',
-      token,
-      rid: currentRoomId
-    }));
-
-    startTimeUpdates();
-  };
-
-  ws.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-
-      switch (data.type) {
-        case 'user':
-          currentUser = data.user;
-          currentRoom = data.roomData;
-          userDetailsMap = data.userDetailsMap || {}; // 保存用户详情映射表
-
-          // 更新房间名称
-          const roomNameElements = document.querySelectorAll('.room-name');
-          roomNameElements.forEach(el => {
-            if (el.closest('.room-item')?.dataset.rid == currentRoomId) {
-              el.textContent = currentRoom.name;
-            }
-          });
-
-          if (inputElement) {
-            inputElement.disabled = false;
-          }
-          break;
-
-        case 'history':
-          messagesElement.innerHTML = '';
-          data.messages.forEach((message) => {
-            messagesElement.appendChild(createMessage(message));
-          });
-          messagesElement.scrollTop = messagesElement.scrollHeight;
-
-          // 发送已读回执
-          if (data.messages.length > 0) {
-            ws.send(JSON.stringify({
-              type: 'read',
-              timestamp: data.messages[data.messages.length - 1].timestamp
-            }));
-          }
-          break;
-
-        case 'chat':
-          // 检查是否是自己发送的消息，如果是则移除临时消息
-          if (data.sender === currentUser?.uid) {
-            const tempMessages = messagesElement.querySelectorAll('.temp-message');
-            tempMessages.forEach(el => el.remove());
-          }
-
-          const messageElement = createMessage(data);
-          messagesElement.appendChild(messageElement);
-          messagesElement.scrollTop = messagesElement.scrollHeight;
-
-          // 发送已读回执
-          ws.send(JSON.stringify({
-            type: 'read',
-            timestamp: data.timestamp
-          }));
-          break;
-
-        case 'read_status_update':
-          data.messages.forEach(msg => {
-            const messageElement = findMessageElementByTimestamp(msg.timestamp);
-            if (messageElement) {
-              updateReadStatus(messageElement, msg.read_by);
-            }
-          });
-          break;
-
-        case 'error':
-          console.error('错误:', data.message);
-          showError(data.message);
-          isConnecting = false;
-          break;
-
-        default:
-          console.log('未知的消息类型:', data.type);
-      }
-    } catch (err) {
-      console.error('处理消息错误:', err, event.data);
-      showError('处理消息错误');
-    }
-  };
-
-  ws.onerror = (error) => {
-    console.error('WebSocket错误:', error);
-    isConnecting = false;
-  };
-
-  ws.onclose = () => {
-    if (inputElement) {
-      inputElement.disabled = true;
-    }
-    isConnecting = false;
-
-    // 清除时间更新定时器
-    if (timeUpdateInterval) {
-      clearInterval(timeUpdateInterval);
-    }
-
-    if (reconnectAttempts < maxReconnectAttempts) {
-      reconnectAttempts++;
-      setTimeout(connectWebSocket, reconnectDelay);
-    } else {
-      showError('连接已断开，请刷新页面重试');
-    }
-  };
-}
-
-function updateReadStatus(messageElement, readByIds) {
-  const readStatusElement = messageElement.querySelector('.read-status');
-  if (readStatusElement) {
-    readStatusElement.textContent = `${readByIds.length}人已读`;
-    readStatusElement.dataset.readBy = JSON.stringify(readByIds);
+function hideOverlay() {
+  const $overlay = $('#overlay');
+  if ($overlay) {
+    $overlay.classList.remove('visible');
   }
 }
 
-function findMessageElementByTimestamp(timestamp) {
-  if (!messagesElement) return null;
-
-  const messages = messagesElement.getElementsByClassName('message');
-  for (const message of messages) {
-    const timestampElement = message.querySelector('.timestamp');
-    if (timestampElement && timestampElement.dataset.timestamp === timestamp) {
-      return message;
-    }
-  }
-  return null;
-}
-
-// 添加显示已读用户列表的函数
-function showReadUsers(readBy) {
-  // 移除已存在的弹窗
-  const existingPopup = document.querySelector('.read-users-popup');
-  if (existingPopup) {
-    existingPopup.remove();
+function showReadUsers(readByIds) {
+  const $existingPopup = document.querySelector('.read-users-popup');
+  if ($existingPopup) {
+    $existingPopup.remove();
   }
 
-  // 创建弹窗
-  const popup = document.createElement('div');
-  popup.className = 'read-users-popup';
+  const $popup = document.createElement('div');
+  $popup.className = 'read-users-popup';
 
-  const userList = readBy.map(user => `
-    <div class="read-user">
-      <span class="user-avatar">${(user.nickname || '?')[0].toUpperCase()}</span>
-      <span class="user-name">${escapeHtml(user.nickname)}</span>
-    </div>
-  `).join('');
+  // 确保有用户信息
+  if (!readByIds || readByIds.length === 0) {
+    readByIds = [uid];
+  }
 
-  popup.innerHTML = `
+  // 根据用户ID获取用户信息
+  const readByUsers = readByIds.map(id => {
+    const member = roomData.members?.find(m => m.uid === id);
+    return {
+      uid: id,
+      nickname: member?.nickname || '未知用户'
+    };
+  });
+
+  // 按昵称字母顺序排序用户列表
+  const sortedReadBy = [...readByUsers].sort((a, b) => {
+    // 当前用户始终排在最前面
+    if (a.uid === uid) return -1;
+    if (b.uid === uid) return 1;
+
+    // 按昵称字母顺序排序
+    return (a.nickname || '').localeCompare(b.nickname || '');
+  });
+
+  const userList = sortedReadBy.map(user => {
+    const isCurrentUser = user.uid === uid;
+    return `
+      <div class="read-user">
+        <span class="user-avatar">${(user.nickname || '?')[0].toUpperCase()}</span>
+        <span class="user-name">${escapeHtml(user.nickname || '未知用户')}${isCurrentUser ? ' (我)' : ''}</span>
+      </div>
+    `;
+  }).join('');
+
+  $popup.innerHTML = `
     <div class="popup-content">
       <div class="popup-header">
-        <h3>已读用户 (${readBy.length})</h3>
+        <h3>已读用户 (${readByIds.length})</h3>
         <button class="close-popup">&times;</button>
       </div>
       <div class="popup-body">
@@ -528,139 +233,429 @@ function showReadUsers(readBy) {
   `;
 
   // 添加关闭按钮事件
-  const closeButton = popup.querySelector('.close-popup');
-  closeButton.addEventListener('click', () => popup.remove());
+  const closeButton = $popup.querySelector('.close-popup');
+  closeButton.addEventListener('click', () => closeReadUsersPopup());
 
-  // 点击弹窗外部关闭
-  popup.addEventListener('click', (e) => {
-    if (e.target === popup) {
-      popup.remove();
-    }
+  $('.app-container')[0].appendChild($popup);
+
+  showOverlay();
+}
+
+function closeReadUsersPopup() {
+  const $popup = $('.read-users-popup')[0];
+  if ($popup) {
+    $popup.remove();
+  }
+
+  hideOverlay();
+}
+
+function openRoomInfo() {
+  updateRoomInfo();
+
+  const $roomInfoPanel = $('#room-info-panel');
+  if ($roomInfoPanel) {
+    $roomInfoPanel.classList.add('open');
+  }
+
+  const $overlay = $('#overlay');
+  if ($overlay) {
+    $overlay.classList.add('visible');
+  }
+}
+
+function closeRoomInfo() {
+  const $roomInfoPanel = $('#room-info-panel');
+  if ($roomInfoPanel) {
+    $roomInfoPanel.classList.remove('open');
+  }
+
+  const $overlay = $('#overlay');
+  if ($overlay) {
+    $overlay.classList.remove('visible');
+  }
+}
+
+function updateRoomInfo() {
+  const $roomNameDisplay = $('.room-name-display')[0];
+  if ($roomNameDisplay) {
+    $roomNameDisplay.textContent = roomData.name;
+  }
+
+  const $roomAvatar = $('#room-info-panel .room-avatar.large')[0];
+  if ($roomAvatar) {
+    $roomAvatar.textContent = roomData.name[0];
+  }
+
+  const $memberCount = $('.member-count')[0];
+  if ($memberCount) {
+    $memberCount.textContent = roomData.members.length;
+  }
+
+  updateMembersList();
+}
+
+function updateMembersList() {
+  const $roomMembersList = $('.room-members-list')[0];
+  if (!$roomMembersList) return;
+
+  $roomMembersList.innerHTML = '';
+
+  // 记录在线用户数量
+  let onlineCount = 0;
+
+  // 按当前用户在最前面，然后是在线用户，最后是离线用户排序
+  const sortedMembers = [...roomData.members].sort((a, b) => {
+    // 当前用户始终排在最前面
+    if (a.uid === uid) return -1;
+    if (b.uid === uid) return 1;
+
+    // 在线用户排在离线用户前面
+    const aOnline = userDetailsMap[a.uid]?.online || false;
+    const bOnline = userDetailsMap[b.uid]?.online || false;
+
+    if (aOnline && !bOnline) return -1;
+    if (!aOnline && bOnline) return 1;
+
+    // 按昵称字母顺序排序
+    return a.nickname.localeCompare(b.nickname);
   });
 
-  document.body.appendChild(popup);
-}
+  sortedMembers.forEach(member => {
+    const memberItem = document.createElement('div');
+    memberItem.className = 'member-item';
 
-// 切换房间
-function switchRoom(roomId) {
-  if (isConnecting) return; // 如果正在连接中，忽略切换请求
+    // 判断是否为当前用户，当前用户始终显示为在线
+    const isCurrentUser = member.uid === uid;
+    // 其他用户根据userDetailsMap中的状态判断
+    const isOnline = isCurrentUser ? true : userDetailsMap[member.uid]?.online || false;
 
-  if (currentRoomId !== roomId) {
-    currentRoomId = roomId;
-    updateRoomList();
-
-    // 保存当前选择的房间ID
-    localStorage.setItem('lastRoomId', currentRoomId);
-
-    // 断开并重新连接WebSocket
-    connectWebSocket();
-  } else {
-    // 如果点击当前房间，且连接正常，刷新消息
-    if (ws && ws.readyState === WebSocket.OPEN && messagesElement) {
-      messagesElement.innerHTML = '';
-      const loadingMessage = document.createElement('div');
-      loadingMessage.className = 'system-message';
-      loadingMessage.textContent = '正在刷新消息...';
-      messagesElement.appendChild(loadingMessage);
-
-      // 使用join消息类型重新加入房间，服务器会返回最新消息
-      const token = localStorage.getItem('token');
-      ws.send(JSON.stringify({
-        type: 'join',
-        token,
-        rid: currentRoomId
-      }));
+    if (isOnline) {
+      onlineCount++;
     }
+
+    const statusText = isOnline ? '在线' : '离线';
+    const statusClass = isOnline ? 'online' : 'offline';
+
+    memberItem.innerHTML = `
+      <div class="member-avatar">${member.nickname[0]}</div>
+      <div class="member-info">
+        <div class="member-nickname">${escapeHtml(member.nickname)}${isCurrentUser ? ' (我)' : ''}</div>
+        <div class="member-status ${statusClass}">${statusText}</div>
+      </div>
+    `;
+
+    $roomMembersList.appendChild(memberItem);
+  });
+
+  // 更新在线人数显示
+  const $memberCountHeader = $('#room-info-panel .room-members-section h4')[0];
+  if ($memberCountHeader) {
+    $memberCountHeader.textContent = `群组成员 (${onlineCount}/${roomData.members.length} 在线)`;
   }
 }
 
-// 添加临时消息的样式
-function addStyles() {
-  const style = document.createElement('style');
-  style.textContent = `
-    .temp-message {
-      opacity: 0.7;
+// 更新所有消息时间
+function updateAllMessageTimes() {
+  const $timestamps = $('.timestamp', false);
+  $timestamps.forEach(element => {
+    const timestamp = parseInt(element.dataset.timestamp);
+    if (timestamp) {
+      element.textContent = formatTime(timestamp);
     }
-    .temp-message::after {
-      content: "发送中...";
-      font-size: 12px;
-      color: #999;
-      display: block;
-      text-align: right;
-      margin-top: 4px;
-    }
-
-    /* 空状态样式 */
-    .empty-room-state, .empty-chat-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      text-align: center;
-      height: 100%;
-      color: #666;
-    }
-
-    .empty-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
-
-    .empty-text {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
-
-    .empty-subtext {
-      font-size: 14px;
-      color: #999;
-    }
-
-    .empty-room-state {
-      height: auto;
-      min-height: 200px;
-    }
-
-    .empty-chat-state {
-      min-height: 300px;
-    }
-  `;
-  document.head.appendChild(style);
+  });
 }
 
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', () => {
-  // 首先初始化DOM元素引用
-  initDOMElements();
-
-  // 添加临时消息样式
-  addStyles();
-
-  // 绑定发送按钮事件
-  const sendButton = document.querySelector('button');
-  if (sendButton) {
-    sendButton.addEventListener('click', sendMessage);
-  }
-
-  // 绑定输入框回车事件
-  if (inputElement) {
-    inputElement.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
-  }
-
-  // 先获取房间列表，然后连接WebSocket
-  fetchRooms();
-});
-
-// 页面卸载时清理定时器
-window.addEventListener('unload', () => {
+let timeUpdateInterval;
+function startTimeUpdates() {
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval);
   }
-});
+  timeUpdateInterval = setInterval(updateAllMessageTimes, 10000);
+}
+
+// 查找消息元素
+function findMessageElementByTimestamp(timestamp) {
+  const $chatMessages = $('#chat-messages');
+  if (!$chatMessages) return null;
+
+  const $messages = $chatMessages.getElementsByClassName('message');
+  for (const $message of $messages) {
+    const $timestamp = $message.querySelector('.timestamp');
+    if ($timestamp && $timestamp.dataset.timestamp === timestamp) {
+      return $message;
+    }
+  }
+
+  return null;
+}
+
+// 更新已读状态
+function updateReadStatus($message, readByIds) {
+  const $readStatus = $message.querySelector('.read-status');
+  if ($readStatus) {
+    $readStatus.textContent = `${readByIds.length}人已读`;
+    $readStatus.dataset.readBy = JSON.stringify(readByIds);
+  }
+}
+
+function showEmptyStateInChat() {
+  const $chatMessages = $('#chat-messages');
+  if (!$chatMessages) return;
+
+  $chatMessages.innerHTML = `
+    <div class="empty-chat-state">
+      <div class="empty-icon">💬</div>
+      <div class="empty-text">没有可用的聊天房间</div>
+      <div class="empty-subtext">请联系管理员创建房间</div>
+    </div>
+  `;
+
+  // 禁用输入框
+  const $messageInput = $('#message-input');
+  if ($messageInput) {
+    $messageInput.disabled = true;
+    $messageInput.placeholder = '没有可用的聊天房间';
+  }
+}
+
+// #region WebSocket
+
+let ws = null;
+let messages = [];
+let roomData = {};
+let userDetailsMap = {};
+let isConnecting = false;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+const reconnectDelay = 3000;
+
+function connectWebSocket() {
+  if (isConnecting) return;
+  isConnecting = true;
+
+  if (ws) ws.close();
+  ws = null;
+
+  const $chatMessages = $('#chat-messages');
+  $chatMessages.innerHTML = `
+    <div class="system-message">正在连接到聊天服务器...</div>
+  `;
+
+  ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+  ws.onopen = wsOnOpen;
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    switch (data.type) {
+      case 'room': wsOnRoom(data); break;
+      case 'history': wsOnHistory(data); break;
+      case 'chat': wsOnChat(data); break;
+      case 'updateRead': wsOnUpdateRead(data); break;
+      case 'error': showError(data.message); break;
+    }
+  };
+  ws.onerror = wsOnError;
+  ws.onclose = wsOnClose;
+}
+
+function wsOnOpen(event) {
+  console.log('wsOnOpen', event);
+  isConnecting = false;
+  reconnectAttempts = 0;
+
+  const $chatMessages = $('#chat-messages');
+  $chatMessages.innerHTML = '';
+
+  ws.send(JSON.stringify({
+    type: 'join',
+    token,
+    rid: currentRoomId
+  }));
+
+  startTimeUpdates();
+}
+
+function wsOnRoom(data) {
+  console.log('wsOnRoom', data);
+  roomData = data.data;
+
+  $('.room-title')[0].textContent = roomData.name;
+}
+
+function wsOnHistory(data) {
+  console.log('wsOnHistory', data);
+  messages = data.data;
+
+  const $chatMessages = $('#chat-messages');
+  $chatMessages.innerHTML = '';
+
+  messages.forEach(messageData => {
+    const $message = createMessage(messageData);
+    $chatMessages.appendChild($message);
+  });
+
+  $chatMessages.scrollTop = $chatMessages.scrollHeight;
+
+  // 发送已读回执
+  if (messages.length > 0) {
+    ws.send(JSON.stringify({
+      type: 'read',
+      timestamp: new Date().getTime()
+    }));
+  }
+}
+
+function wsOnChat(data) {
+  console.log('wsOnChat', data);
+  const messageData = data.data;
+
+  const $message = createMessage(messageData);
+  const $chatMessages = $('#chat-messages');
+  $chatMessages.appendChild($message);
+  $chatMessages.scrollTop = $chatMessages.scrollHeight;
+
+  ws.send(JSON.stringify({
+    type: 'read',
+    timestamp: new Date().getTime()
+  }));
+}
+
+function wsOnUpdateRead(data) {
+  data.messages.forEach(msg => {
+    const messageElement = findMessageElementByTimestamp(msg.timestamp);
+    if (messageElement) {
+      updateReadStatus(messageElement, msg.read_by);
+    }
+  });
+}
+
+function wsOnError(error) {
+  console.error('WebSocket错误:', error);
+  isConnecting = false;
+}
+
+// 保存最后一次正常关闭的标记
+let normalClose = false;
+function wsOnClose(event) {
+  console.log('wsOnClose', event);
+  isConnecting = false;
+
+  // 清除时间更新定时器
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval);
+  }
+
+  // 只有在非正常关闭且未达到最大重连次数时才重连
+  if (!normalClose && reconnectAttempts < maxReconnectAttempts) {
+    reconnectAttempts++;
+    setTimeout(connectWebSocket, reconnectDelay);
+  } else if (reconnectAttempts >= maxReconnectAttempts) {
+    showError('连接已断开，请刷新页面重试');
+  }
+
+  // 重置正常关闭标记
+  normalClose = false;
+}
+
+function switchRoom(rid) {
+  if (isConnecting || rid === currentRoomId) return;
+
+  currentRoomId = rid;
+  localStorage.setItem('lastRoomId', currentRoomId);
+
+  const $activeRoom = $('.room-item.active', false)?.[0];
+  if ($activeRoom) {
+    $activeRoom.classList.remove('active');
+  }
+
+  const $newActiveRoom = $(`.room-item[data-rid="${currentRoomId}"]`, false)[0];
+  if ($newActiveRoom) {
+    $newActiveRoom.classList.add('active');
+  }
+
+  $('#chat-messages').innerHTML = '';
+
+  // 正常关闭旧连接然后重新连接
+  normalClose = true;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.close();
+  }
+
+  // 重置重连计数器
+  reconnectAttempts = 0;
+  connectWebSocket();
+}
+
+function sendMessage() {
+  const $messageInput = $('#message-input');
+  const message = $messageInput.value.trim();
+  if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+  // 发送消息
+  ws.send(JSON.stringify({
+    type: 'message',
+    token,
+    rid: currentRoomId,
+    content: message
+  }));
+
+  $messageInput.value = '';
+}
+
+// #endregion
+
+function initDOM() {
+  $('.user-nickname')[0].textContent = nickname;
+  $('.user-avatar')[0].textContent = nickname[0];
+
+  $('#send-message-btn').addEventListener('click', sendMessage);
+  $('#message-input').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  });
+
+  $('#room-info-button').addEventListener('click', openRoomInfo);
+  $('#close-room-info').addEventListener('click', closeRoomInfo);
+
+  $('#overlay').addEventListener('click', (e) => {
+    if (e.target === $('#overlay')) {
+      closeRoomInfo();
+      closeReadUsersPopup();
+    }
+  });
+}
+
+function unload() {
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval);
+  }
+
+  // 正常关闭WebSocket连接
+  normalClose = true;
+  if (ws) {
+    ws.close();
+  }
+}
+
+let rooms = [];
+
+(async () => {
+  try {
+    rooms = await fetchRooms();
+
+    if (rooms.length === 0) {
+      showEmptyStateInChat();
+    } else {
+      updateRoomList(rooms);
+      connectWebSocket();
+    }
+  } catch (error) {
+    showError(error.message);
+  }
+})();
+
+document.addEventListener('DOMContentLoaded', initDOM);
+window.addEventListener('unload', unload);

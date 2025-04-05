@@ -29,7 +29,7 @@ async function handleRead(ws, data, users, dbMessages) {
     for (const [client, clientUser] of users.entries()) {
       if (clientUser.rid === reader.rid && client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify({
-          type: 'read_status_update',
+          type: 'updateRead',
           messages: updatedMessages.map(msg => ({
             timestamp: msg.timestamp,
             read_by: msg.read_by // 只传输用户ID数组

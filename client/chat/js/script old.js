@@ -1,247 +1,37 @@
-// 声明变量但不立即获取DOM元素
-let input;
-let chatMessages;
-let sendButton;
-let backButton;
-let roomDrawer;
-let overlay;
-let closeDrawerBtn;
-let nicknameElement;
-let userAvatarElement;
-let roomInfoButton;
-let roomInfoPanel;
-let closeRoomInfoButton;
-let roomNameDisplay;
-let memberCountElement;
-let roomMembersList;
+const appContainer = document.querySelector('.app-container');
+const inputElement = document.getElementById('message-input');
+const messagesElement = document.getElementById('chat-messages');
+const nicknameElement = document.querySelector('.user-nickname');
+const userAvatarElement = document.querySelector('.user-avatar');
+const roomInfoButton = document.getElementById('room-info-button');
+const roomInfoPanel = document.getElementById('room-info-panel');
+const closeRoomInfoButton = document.getElementById('close-room-info');
+const overlayElement = document.getElementById('overlay');
+const roomNameDisplay = document.querySelector('.room-name-display');
+const memberCountElement = document.querySelector('.member-count');
+const roomMembersList = document.querySelector('.room-members-list');
+const sendButton = document.querySelector('button');
 
 const token = localStorage.getItem('token');
 if (!token) {
   window.location.href = '/login';
 }
 
+const savedRoomId = parseInt(localStorage.getItem('lastRoomId'));
+
 let ws = null;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
 const reconnectDelay = 3000;
 
-// 存储当前用户信息
 let currentUser = null;
 let currentRoom = null;
-let userDetailsMap = {}; // 添加用户详情映射表
-let userRooms = []; // 存储用户的房间列表
-let currentRoomId = null; // 当前选中的房间ID
-let isConnecting = false; // 标记是否正在连接WebSocket
+let userDetailsMap = {};
+let userRooms = [];
+let currentRoomId = null;
+let isConnecting = false;
 
 let timeUpdateInterval;
-
-// 初始化DOM元素引用
-function initDOMElements() {
-  input = document.getElementById('message-input');
-  chatMessages = document.getElementById('chat-messages');
-  sendButton = document.getElementById('send-button');
-  backButton = document.getElementById('back-button');
-  roomDrawer = document.getElementById('room-drawer');
-  overlay = document.getElementById('overlay');
-  closeDrawerBtn = document.getElementById('close-drawer');
-  nicknameElement = document.querySelector('.user-nickname');
-  userAvatarElement = document.querySelector('.user-avatar');
-  roomInfoButton = document.getElementById('room-info-button');
-  roomInfoPanel = document.getElementById('room-info-panel');
-  closeRoomInfoButton = document.getElementById('close-room-info');
-  roomNameDisplay = document.querySelector('.room-name-display');
-  memberCountElement = document.querySelector('.member-count');
-  roomMembersList = document.querySelector('.room-members-list');
-
-  // 设置用户信息
-  if (nicknameElement) {
-    nicknameElement.textContent = localStorage.getItem('nickname');
-  }
-
-  if (userAvatarElement) {
-    userAvatarElement.textContent = localStorage.getItem('nickname')[0];
-  }
-}
-
-// 获取用户的房间列表
-async function fetchRooms() {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = '/login';
-      return;
-    }
-
-    const response = await fetch('/api/room', {
-      headers: {
-        'Authorization': token
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('获取房间列表失败');
-    }
-
-    const result = await response.json();
-    if (result.code === 'SUCCESS') {
-      userRooms = result.data;
-
-      // 如果有房间
-      if (userRooms.length > 0) {
-        // 尝试从localStorage获取上次选择的房间ID
-        const savedRoomId = parseInt(localStorage.getItem('lastRoomId'));
-
-        // 检查保存的房间ID是否仍然有效
-        const roomExists = userRooms.some(room => room.rid === savedRoomId);
-
-        if (roomExists) {
-          currentRoomId = savedRoomId;
-        } else {
-          currentRoomId = userRooms[0].rid;
-        }
-
-        updateRoomList();
-        connectWebSocket();
-      } else {
-        // 没有可用房间时，显示提示信息而不是报错
-        updateRoomListWithEmptyState();
-        showEmptyStateInChat();
-      }
-    } else {
-      throw new Error(result.message || '获取房间列表失败');
-    }
-  } catch (error) {
-    console.error('获取房间列表错误:', error);
-    showError(error.message);
-  }
-}
-
-// 更新房间列表UI
-function updateRoomList() {
-  const roomListElement = document.querySelector('.room-list');
-  if (!roomListElement) return;
-
-  roomListElement.innerHTML = '';
-
-  userRooms.forEach(room => {
-    const roomElement = document.createElement('div');
-    roomElement.className = `room-item ${room.rid === currentRoomId ? 'active' : ''}`;
-    roomElement.dataset.rid = room.rid;
-
-    roomElement.innerHTML = `
-      <div class="room-avatar">${room.name[0]}</div>
-      <div class="room-info">
-        <div class="room-name">${escapeHtml(room.name)}</div>
-        <div class="room-last-message">点击进入聊天</div>
-      </div>
-    `;
-
-    roomElement.addEventListener('click', () => {
-      switchRoom(room.rid);
-    });
-
-    roomListElement.appendChild(roomElement);
-  });
-}
-
-// 在房间列表中显示空状态提示
-function updateRoomListWithEmptyState() {
-  const roomListElement = document.querySelector('.room-list');
-  if (!roomListElement) return;
-
-  roomListElement.innerHTML = `
-    <div class="empty-room-state">
-      <div class="empty-icon">📭</div>
-      <div class="empty-text">没有可用的聊天房间</div>
-      <div class="empty-subtext">请联系管理员创建房间</div>
-    </div>
-  `;
-
-  // 更新房间标题
-  const roomTitle = document.querySelector('.room-title');
-  if (roomTitle) {
-    roomTitle.textContent = '无可用房间';
-  }
-}
-
-// 在聊天区域显示空状态提示
-function showEmptyStateInChat() {
-  if (!chatMessages) return;
-
-  chatMessages.innerHTML = `
-    <div class="empty-chat-state">
-      <div class="empty-icon">💬</div>
-      <div class="empty-text">没有可用的聊天房间</div>
-      <div class="empty-subtext">请联系管理员创建房间</div>
-    </div>
-  `;
-
-  // 禁用输入框和发送按钮
-  if (input) {
-    input.disabled = true;
-    input.placeholder = '没有可用的聊天房间';
-  }
-
-  if (sendButton) {
-    sendButton.disabled = true;
-  }
-}
-
-function initDrawer() {
-  if (backButton) {
-    backButton.addEventListener('click', function(e) {
-      e.preventDefault();
-      openDrawer();
-    });
-  }
-
-  if (closeDrawerBtn) {
-    closeDrawerBtn.addEventListener('click', closeDrawer);
-  }
-
-  if (overlay) {
-    overlay.addEventListener('click', closeDrawer);
-  }
-
-  // 初始化群组详情页事件
-  initRoomInfoEvents();
-}
-
-// 初始化群组详情页事件
-function initRoomInfoEvents() {
-  if (roomInfoButton) {
-    roomInfoButton.addEventListener('click', openRoomInfo);
-  }
-
-  if (closeRoomInfoButton) {
-    closeRoomInfoButton.addEventListener('click', closeRoomInfo);
-  }
-}
-
-// 打开抽屉菜单
-function openDrawer() {
-  if (roomDrawer) {
-    roomDrawer.classList.add('open');
-    document.body.style.overflow = 'hidden'; // 防止背景滚动
-  }
-
-  if (overlay) {
-    overlay.classList.add('visible');
-  }
-}
-
-// 关闭抽屉菜单
-function closeDrawer() {
-  if (roomDrawer) {
-    roomDrawer.classList.remove('open');
-  }
-
-  if (overlay) {
-    overlay.classList.remove('visible');
-  }
-
-  document.body.style.overflow = ''; // 恢复背景滚动
-}
 
 // 打开群组详情页
 function openRoomInfo() {
@@ -252,12 +42,20 @@ function openRoomInfo() {
   if (roomInfoPanel) {
     roomInfoPanel.classList.add('open');
   }
+
+  if (overlayElement) {
+    overlayElement.classList.add('visible');
+  }
 }
 
 // 关闭群组详情页
 function closeRoomInfo() {
   if (roomInfoPanel) {
     roomInfoPanel.classList.remove('open');
+  }
+
+  if (overlayElement) {
+    overlayElement.classList.remove('visible');
   }
 }
 
@@ -338,9 +136,90 @@ function updateMembersList() {
   });
 
   // 更新在线人数显示
-  const memberCountHeader = document.querySelector('.room-members-section h4');
+  const memberCountHeader = roomInfoPanel.querySelector('.room-members-section h4');
   if (memberCountHeader) {
     memberCountHeader.textContent = `群组成员 (${onlineCount}/${currentRoom.members.length} 在线)`;
+  }
+}
+
+// 获取用户的房间列表
+async function fetchRooms() {
+  const response = await fetch('/api/room', {
+    headers: {
+      'Authorization': token
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('获取房间列表失败');
+  }
+
+  const result = await response.json();
+  if (result.code === 'SUCCESS') {
+    return result.data;
+  } else {
+    throw new Error(result.message || '获取房间列表失败');
+  }
+}
+
+// 更新房间列表UI
+function updateRoomList() {
+  const roomListElement = document.querySelector('.room-list');
+  if (!roomListElement) return;
+
+  roomListElement.innerHTML = '';
+
+  userRooms.forEach(room => {
+    const roomElement = document.createElement('div');
+    roomElement.className = `room-item ${room.rid === currentRoomId ? 'active' : ''}`;
+    roomElement.dataset.rid = room.rid;
+
+    roomElement.innerHTML = `
+      <div class="room-avatar">${room.name[0]}</div>
+      <div class="room-info">
+        <div class="room-name">${escapeHtml(room.name)}</div>
+        <div class="room-last-message">点击进入聊天</div>
+      </div>
+    `;
+
+    roomElement.addEventListener('click', () => {
+      switchRoom(room.rid);
+    });
+
+    roomListElement.appendChild(roomElement);
+  });
+}
+
+// 在房间列表中显示空状态提示
+function updateRoomListWithEmptyState() {
+  const roomListElement = document.querySelector('.room-list');
+  if (!roomListElement) return;
+
+  roomListElement.innerHTML = `
+    <div class="empty-room-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-text">没有可用的聊天房间</div>
+      <div class="empty-subtext">请联系管理员创建房间</div>
+    </div>
+  `;
+}
+
+// 在聊天区域显示空状态提示
+function showEmptyStateInChat() {
+  if (!messagesElement) return;
+
+  messagesElement.innerHTML = `
+    <div class="empty-chat-state">
+      <div class="empty-icon">💬</div>
+      <div class="empty-text">没有可用的聊天房间</div>
+      <div class="empty-subtext">请联系管理员创建房间</div>
+    </div>
+  `;
+
+  // 禁用输入框
+  if (inputElement) {
+    inputElement.disabled = true;
+    inputElement.placeholder = '没有可用的聊天房间';
   }
 }
 
@@ -405,18 +284,29 @@ function formatTime(timestamp) {
   const now = new Date();
   const diff = now - date;
 
-  if (diff < 60000) { // 小于1分钟
+  if (diff < 60000) {
+    // 小于1分钟
     return '刚刚';
-  } else if (diff < 3600000) { // 小于1小时
+  }
+  else if (diff < 3600000) {
+    // 小于1小时
     return `${Math.floor(diff / 60000)}分钟前`;
-  } else if (date.getDate() === now.getDate()) { // 同一天
+  }
+  else if (date.getDate() === now.getDate()) {
+    // 同一天
     return date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
-  } else if (now - date < 86400000 * 7) { // 一周内
+  }
+  else if (now - date < 86400000 * 7) {
+    // 一周内
     const days = ['日', '一', '二', '三', '四', '五', '六'];
     return `周${days[date.getDay()]} ${date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' })}`;
-  } else if (date.getFullYear() === now.getFullYear()) { // 同一年
+  }
+  else if (date.getFullYear() === now.getFullYear()) {
+    // 同一年
     return `${date.getMonth() + 1}月${date.getDate()}日`;
-  } else { // 其他情况
+  }
+  else {
+    // 其他情况
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   }
 }
@@ -442,9 +332,9 @@ function showError(message) {
 }
 
 function sendMessage() {
-  if (!input) return;
+  if (!inputElement) return;
 
-  const content = input.value.trim();
+  const content = inputElement.value.trim();
   if (!content || !currentUser || !ws || ws.readyState !== WebSocket.OPEN) {
     if (!content) {
       console.log('消息内容为空，不发送');
@@ -471,8 +361,8 @@ function sendMessage() {
   // 添加临时消息到界面
   const tempElement = createMessage(tempMessage);
   tempElement.classList.add('temp-message');
-  chatMessages.appendChild(tempElement);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  messagesElement.appendChild(tempElement);
+  messagesElement.scrollTop = messagesElement.scrollHeight;
 
   // 发送消息到服务器
   try {
@@ -482,8 +372,7 @@ function sendMessage() {
     }));
 
     // 清空输入框
-    input.value = '';
-    input.focus();
+    inputElement.value = '';
   } catch (err) {
     console.error('发送消息失败:', err);
     showError('发送消息失败，请重试');
@@ -495,7 +384,7 @@ function sendMessage() {
 
 function connectWebSocket() {
   // 如果已经在连接中，则不重复连接
-  if (isConnecting || !chatMessages) return;
+  if (isConnecting || !messagesElement) return;
   isConnecting = true;
 
   // 清理之前的WebSocket连接
@@ -504,8 +393,9 @@ function connectWebSocket() {
     const oldWs = ws;
     ws = null;
 
-    if (input) input.disabled = true;
-    if (sendButton) sendButton.disabled = true;
+    if (inputElement) {
+      inputElement.disabled = true;
+    }
 
     try {
       oldWs.onclose = null; // 移除onclose监听器，防止自动重连
@@ -518,15 +408,15 @@ function connectWebSocket() {
   }
 
   // 在连接新WebSocket前清空消息区域
-  chatMessages.innerHTML = '';
+  messagesElement.innerHTML = '';
 
   // 添加连接中提示
   const loadingMessage = document.createElement('div');
   loadingMessage.className = 'system-message';
   loadingMessage.textContent = '正在连接到聊天服务器...';
-  chatMessages.appendChild(loadingMessage);
+  messagesElement.appendChild(loadingMessage);
 
-  const wsPath = '/ws';  // 与服务器端配置保持一致
+  const wsPath = '/ws';
   ws = new WebSocket(`ws://${window.location.host}${wsPath}`);
 
   ws.onopen = () => {
@@ -534,7 +424,7 @@ function connectWebSocket() {
     reconnectAttempts = 0;
 
     // 清除连接中提示
-    chatMessages.innerHTML = '';
+    messagesElement.innerHTML = '';
 
     // 保存当前选择的房间ID
     localStorage.setItem('lastRoomId', currentRoomId);
@@ -545,7 +435,6 @@ function connectWebSocket() {
       rid: currentRoomId
     }));
 
-    // 启动时间更新
     startTimeUpdates();
   };
 
@@ -568,13 +457,22 @@ function connectWebSocket() {
           }
 
           // 更新房间名称
+          const roomNameElements = document.querySelectorAll('.room-name');
+          roomNameElements.forEach(el => {
+            if (el.closest('.room-item')?.dataset.rid == currentRoomId) {
+              el.textContent = currentRoom.name;
+            }
+          });
+
+          // 更新房间标题
           const roomTitle = document.querySelector('.room-title');
           if (roomTitle) {
             roomTitle.textContent = currentRoom.name;
           }
 
-          if (input) input.disabled = false;
-          if (sendButton) sendButton.disabled = false;
+          if (inputElement) {
+            inputElement.disabled = false;
+          }
 
           // 更新群组详情
           updateRoomInfo();
@@ -599,11 +497,11 @@ function connectWebSocket() {
           break;
 
         case 'history':
-          chatMessages.innerHTML = '';
+          messagesElement.innerHTML = '';
           data.messages.forEach((message) => {
-            chatMessages.appendChild(createMessage(message));
+            messagesElement.appendChild(createMessage(message));
           });
-          chatMessages.scrollTop = chatMessages.scrollHeight;
+          messagesElement.scrollTop = messagesElement.scrollHeight;
 
           // 发送已读回执
           if (data.messages.length > 0) {
@@ -617,13 +515,13 @@ function connectWebSocket() {
         case 'chat':
           // 检查是否是自己发送的消息，如果是则移除临时消息
           if (data.sender === currentUser?.uid) {
-            const tempMessages = chatMessages.querySelectorAll('.temp-message');
+            const tempMessages = messagesElement.querySelectorAll('.temp-message');
             tempMessages.forEach(el => el.remove());
           }
 
           const messageElement = createMessage(data);
-          chatMessages.appendChild(messageElement);
-          chatMessages.scrollTop = chatMessages.scrollHeight;
+          messagesElement.appendChild(messageElement);
+          messagesElement.scrollTop = messagesElement.scrollHeight;
 
           // 发送已读回执
           ws.send(JSON.stringify({
@@ -662,8 +560,9 @@ function connectWebSocket() {
   };
 
   ws.onclose = () => {
-    if (input) input.disabled = true;
-    if (sendButton) sendButton.disabled = true;
+    if (inputElement) {
+      inputElement.disabled = true;
+    }
     isConnecting = false;
 
     // 清除时间更新定时器
@@ -689,40 +588,17 @@ function updateReadStatus(messageElement, readByIds) {
 }
 
 function findMessageElementByTimestamp(timestamp) {
-  if (!chatMessages) return null;
+  if (!messagesElement) return null;
 
-  const messages = chatMessages.getElementsByClassName('message');
+  const messages = messagesElement.getElementsByClassName('message');
   for (const message of messages) {
     const timestampElement = message.querySelector('.timestamp');
     if (timestampElement && timestampElement.dataset.timestamp === timestamp) {
       return message;
     }
   }
+
   return null;
-}
-
-// 键盘高度调整（针对移动设备）
-function handleKeyboard() {
-  if (!input || !chatMessages) return;
-
-  // 在iOS上，当键盘弹出时，视窗高度会变化
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-  if (isIOS) {
-    window.visualViewport.addEventListener('resize', () => {
-      const messageBox = document.querySelector('.message-input-area');
-      if (messageBox) {
-        messageBox.style.bottom = `${window.innerHeight - window.visualViewport.height}px`;
-      }
-    });
-  }
-
-  // 焦点切换时平滑滚动到底部
-  input.addEventListener('focus', () => {
-    setTimeout(() => {
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }, 300);
-  });
 }
 
 // 添加显示已读用户列表的函数
@@ -778,12 +654,12 @@ function showReadUsers(readBy) {
   const closeButton = popup.querySelector('.close-popup');
   closeButton.addEventListener('click', () => closeReadUsersPopup());
 
-  document.body.appendChild(popup);
+  appContainer.appendChild(popup);
 
   // 显示遮罩层
-  if (overlay) {
-    overlay.classList.add('visible');
-    overlay.addEventListener('click', closeReadUsersPopup, { once: true });
+  if (overlayElement) {
+    overlayElement.classList.add('visible');
+    overlayElement.addEventListener('click', closeReadUsersPopup, { once: true });
   }
 }
 
@@ -794,11 +670,9 @@ function closeReadUsersPopup() {
     popup.remove();
   }
 
-  // 隐藏遮罩层（如果群组详情面板和抽屉都没有打开）
-  if (overlay &&
-      !roomInfoPanel.classList.contains('open') &&
-      !roomDrawer.classList.contains('open')) {
-    overlay.classList.remove('visible');
+  // 隐藏遮罩层（如果群组详情面板没有打开）
+  if (overlayElement && !roomInfoPanel.classList.contains('open')) {
+    overlayElement.classList.remove('visible');
   }
 }
 
@@ -815,17 +689,14 @@ function switchRoom(roomId) {
 
     // 断开并重新连接WebSocket
     connectWebSocket();
-
-    // 关闭抽屉菜单
-    closeDrawer();
   } else {
     // 如果点击当前房间，且连接正常，刷新消息
-    if (ws && ws.readyState === WebSocket.OPEN && chatMessages) {
-      chatMessages.innerHTML = '';
+    if (ws && ws.readyState === WebSocket.OPEN && messagesElement) {
+      messagesElement.innerHTML = '';
       const loadingMessage = document.createElement('div');
       loadingMessage.className = 'system-message';
       loadingMessage.textContent = '正在刷新消息...';
-      chatMessages.appendChild(loadingMessage);
+      messagesElement.appendChild(loadingMessage);
 
       // 使用join消息类型重新加入房间，服务器会返回最新消息
       const token = localStorage.getItem('token');
@@ -834,41 +705,25 @@ function switchRoom(roomId) {
         token,
         rid: currentRoomId
       }));
-
-      // 关闭抽屉菜单
-      closeDrawer();
     }
   }
 }
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-  // 首先初始化DOM元素引用
-  initDOMElements();
+  nicknameElement.textContent = localStorage.getItem('nickname');
+  userAvatarElement.textContent = localStorage.getItem('nickname')[0];
 
-  // 初始化抽屉菜单
-  initDrawer();
-
-  // 绑定发送按钮事件
-  if (sendButton) {
-    sendButton.addEventListener('click', sendMessage);
-  }
-
-  // 绑定输入框回车事件
-  if (input) {
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
-  }
-
-  // 处理键盘弹出的问题
-  handleKeyboard();
-
-  // 先获取房间列表，然后连接WebSocket
-  fetchRooms();
+  roomInfoButton.addEventListener('click', openRoomInfo);
+  closeRoomInfoButton.addEventListener('click', closeRoomInfo);
+  overlayElement.addEventListener('click', closeRoomInfo);
+  sendButton.addEventListener('click', sendMessage);
+  inputElement.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
 });
 
 // 页面卸载时清理定时器
@@ -876,13 +731,4 @@ window.addEventListener('unload', () => {
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval);
   }
-});
-
-// 监听设备方向变化，调整UI
-window.addEventListener('orientationchange', () => {
-  setTimeout(() => {
-    if (chatMessages) {
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-  }, 300);
 });
