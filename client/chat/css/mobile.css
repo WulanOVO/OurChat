@@ -84,14 +84,8 @@ body{
   color: #fff;
 }
 
-/* 群组信息面板 */
 .room-info-panel {
-  width: 100%;
-  transform: translateX(100%);
-}
-
-.room-info-panel.open {
-  transform: translateX(0);
+  width: 100%;/
 }
 
 .read-users-popup {
