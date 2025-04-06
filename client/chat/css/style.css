@@ -632,39 +632,38 @@ button:disabled:hover {
 .room-info-panel {
   position: absolute;
   top: 0;
-  right: -360px;
+  right: 0;
   width: 350px;
   height: 100%;
   background-color: white;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
   z-index: 30;
-  transition: right 0.3s ease;
-  display: flex;
-  flex-direction: column;
+  transform: translateX(105%);
+  transition: transform 0.3s ease;
   border-left: 1px solid #e0f0ff;
 }
 
 .room-info-panel.open {
-  right: 0;
+  transform: translateX(0);
 }
 
 .room-info-header {
   display: flex;
-  align-items: center;
   padding: 15px;
   border-bottom: 1px solid #e0e0e0;
 }
 
 .room-info-header h3 {
-  flex-grow: 1;
-  margin: 0;
+  position: absolute;
+  left: 50%;
+  margin-top: 3px;
+  transform: translateX(-50%);
   text-align: center;
 }
 
 .close-button {
   background: none;
   border: none;
-  cursor: pointer;
   color: #555;
   padding: 5px;
   border-radius: 50%;

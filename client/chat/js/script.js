@@ -118,6 +118,9 @@ function updateRoomList(rooms) {
     `;
 
     $room.addEventListener('click', () => {
+      if (typeof closeSidebar === 'function') {
+        closeSidebar();
+      }
       switchRoom(room.rid);
     });
 
@@ -278,7 +281,7 @@ function showReadUsers(readByIds) {
 }
 
 function closeReadUsersPopup() {
-  const $popup = $('.read-users-popup')[0];
+  const $popup = $('.read-users-popup', false)[0];
   if ($popup) {
     $popup.remove();
   }
@@ -720,6 +723,9 @@ let rooms = [];
     if (rooms.length === 0) {
       showEmptyStateInChat();
     } else {
+      if (!currentRoomId) {
+        currentRoomId = rooms[0].rid;
+      }
       updateRoomList(rooms);
       connectWebSocket();
     }
