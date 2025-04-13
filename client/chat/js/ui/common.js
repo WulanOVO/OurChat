@@ -1,5 +1,5 @@
 import {
-  userInfo,
+  uid,
   roomData,
   userDetailsMap,
   formatTime,
@@ -64,10 +64,12 @@ export function updateRoomList(rooms) {
 }
 
 export function createMessage(messageData) {
-  const isMyMessage = messageData.sender === userInfo.uid;
+  const isMyMessage = messageData.sender === uid;
 
   const $message = document.createElement('div');
-  $message.className = `message ${isMyMessage ? 'my-message' : 'other-message'}`;
+  $message.className = `message ${
+    isMyMessage ? 'my-message' : 'other-message'
+  }`;
 
   const senderInfo = roomData.members?.find(m => m.uid === messageData.sender);
   const displayName = senderInfo?.nickname || '未知用户';
@@ -76,8 +78,12 @@ export function createMessage(messageData) {
     <div class="username">${escapeHtml(displayName)}</div>
     <div class="content">${escapeHtml(messageData.content)}</div>
     <div class="message-info">
-      <span class="timestamp" data-timestamp="${messageData.timestamp}">${formatTime(messageData.timestamp)}</span>
-      <span class="read-status" data-read-by='${JSON.stringify(messageData.read_by || [])}'>${messageData.read_by?.length || 1}人已读</span>
+      <span class="timestamp" data-timestamp="${
+        messageData.timestamp
+      }">${formatTime(messageData.timestamp)}</span>
+      <span class="read-status" data-read-by='${JSON.stringify(
+        messageData.read_by || []
+      )}'>${messageData.read_by?.length || 1}人已读</span>
     </div>
   `;
 
@@ -162,7 +168,7 @@ export function showReadUsersPopup(readByIds) {
 
   // 确保有用户信息
   if (!readByIds || readByIds.length === 0) {
-    readByIds = [userInfo.uid];
+    readByIds = [uid];
   }
 
   // 根据用户ID获取用户信息
@@ -177,22 +183,27 @@ export function showReadUsersPopup(readByIds) {
   // 按昵称字母顺序排序用户列表
   const sortedReadBy = [...readByUsers].sort((a, b) => {
     // 当前用户始终排在最前面
-    if (a.uid === userInfo.uid) return -1;
-    if (b.uid === userInfo.uid) return 1;
+    if (a.uid === uid) return -1;
+    if (b.uid === uid) return 1;
 
     // 按昵称字母顺序排序
     return (a.nickname || '').localeCompare(b.nickname || '');
   });
 
-  const userList = sortedReadBy.map(user => {
-    const isCurrentUser = user.uid === userInfo.uid;
-    return `
+  const userList = sortedReadBy
+    .map(user => {
+      const isCurrentUser = user.uid === uid;
+      return `
       <div class="read-user">
-        <span class="user-avatar">${(user.nickname || '?')[0].toUpperCase()}</span>
-        <span class="user-name">${escapeHtml(user.nickname || '未知用户')}${isCurrentUser ? ' (我)' : ''}</span>
+        <span class="user-avatar">${(user.nickname ||
+          '?')[0].toUpperCase()}</span>
+        <span class="user-name">${escapeHtml(user.nickname || '未知用户')}${
+        isCurrentUser ? ' (我)' : ''
+      }</span>
       </div>
     `;
-  }).join('');
+    })
+    .join('');
 
   $popup.innerHTML = `
     <div class="popup-content">
@@ -281,8 +292,8 @@ export function updateMembersList() {
   // 按当前用户在最前面，然后是在线用户，最后是离线用户排序
   const sortedMembers = [...roomData.members].sort((a, b) => {
     // 当前用户始终排在最前面
-    if (a.uid === userInfo.uid) return -1;
-    if (b.uid === userInfo.uid) return 1;
+    if (a.uid === uid) return -1;
+    if (b.uid === uid) return 1;
 
     // 在线用户排在离线用户前面
     const aOnline = userDetailsMap[a.uid]?.online || false;
@@ -300,12 +311,9 @@ export function updateMembersList() {
     $memberItem.className = 'member-item';
 
     // 判断是否为当前用户，当前用户始终显示为在线
-    const isCurrentUser = member.uid === userInfo.uid;
+    const isCurrentUser = member.uid === uid;
     let isOnline = false;
-    if (
-      isCurrentUser ||
-      userDetailsMap[member.uid]?.online
-    ) {
+    if (isCurrentUser || userDetailsMap[member.uid]?.online) {
       isOnline = true;
     }
 
@@ -319,7 +327,9 @@ export function updateMembersList() {
     $memberItem.innerHTML = `
       <div class="member-avatar">${member.nickname[0]}</div>
       <div class="member-info">
-        <div class="member-nickname">${escapeHtml(member.nickname)}${isCurrentUser ? ' (我)' : ''}</div>
+        <div class="member-nickname">${escapeHtml(member.nickname)}${
+      isCurrentUser ? ' (我)' : ''
+    }</div>
         <div class="member-status ${statusClass}">${statusText}</div>
       </div>
     `;
@@ -384,5 +394,58 @@ export function showEmptyStateInChat() {
   if ($messageInput) {
     $messageInput.disabled = true;
     $messageInput.placeholder = '没有可用的聊天房间';
+  }
+}
+
+export function clearChatMessages() {
+  const $chatMessages = $('#chat-messages');
+  if ($chatMessages) {
+    $chatMessages.innerHTML = '';
+  }
+}
+
+export function setRoomTitle(title) {
+  const $roomTitle = $('.room-title')?.[0];
+  if ($roomTitle) {
+    $roomTitle.textContent = escapeHtml(title);
+  }
+}
+
+export function appendChatMessage(messageElement) {
+  const $chatMessages = $('#chat-messages');
+  if ($chatMessages) {
+    $chatMessages.appendChild(messageElement);
+  }
+}
+
+export function scrollChatToBottom() {
+  const $chatMessages = $('#chat-messages');
+  if ($chatMessages) {
+    $chatMessages.scrollTop = $chatMessages.scrollHeight;
+  }
+}
+
+export function setActiveRoomUI(newRoomId) {
+  // 移除旧的 active 类
+  const $activeRoom = $('.room-item.active', false)?.[0];
+  if ($activeRoom) {
+    $activeRoom.classList.remove('active');
+  }
+
+  // 添加新的 active 类
+  const $newActiveRoom = $(`.room-item[data-rid="${newRoomId}"]`, false)?.[0];
+  if ($newActiveRoom) {
+    $newActiveRoom.classList.add('active');
+  }
+}
+
+export function getMessageInput() {
+  return $('#message-input').value.trim();
+}
+
+export function clearMessageInput() {
+  const $messageInput = $('#message-input');
+  if ($messageInput) {
+    $messageInput.value = '';
   }
 }

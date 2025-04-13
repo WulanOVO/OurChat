@@ -1,5 +1,4 @@
 import {
-  $,
   updateAllMessageTimes,
   updateReadStatus,
   createMessage,
@@ -8,40 +7,46 @@ import {
   showError,
   showSystemMessage,
   showEmptyStateInChat,
-  updateRoomList
+  updateRoomList,
+  clearChatMessages,
+  setRoomTitle,
+  appendChatMessage,
+  scrollChatToBottom,
+  getMessageInput,
+  setActiveRoomUI,
+  clearMessageInput
 } from '../ui/common.js';
 
-export const userInfo = {
-  token     : localStorage.getItem('token'),
-  uid       : parseInt(localStorage.getItem('uid')),
-  nickname  : localStorage.getItem('nickname'),
-  lastRoomId: parseInt(localStorage.getItem('lastRoomId')),
-}
+export const token = localStorage.getItem('token');
+export const uid = parseInt(localStorage.getItem('uid'));
+export const nickname = localStorage.getItem('nickname');
+export const lastRoomId = parseInt(localStorage.getItem('lastRoomId'));
 
-const maxReconnectAttempts = 5;
 const reconnectDelay = 3000;
+const maxReconnectAttempts = 5;
 
 let ws = null;
 let rooms = [];
 let messages = [];
+let normalClose = false;
 let isConnecting = false;
 let reconnectAttempts = 0;
 let timeUpdateInterval = null;
 
 export let roomData = {};
 export let userDetailsMap = {};
-export let currentRoomId = userInfo.lastRoomId;
+export let currentRoomId = lastRoomId;
 
 export function escapeHtml(unsafe) {
   if (typeof unsafe !== 'string') {
     return '';
   }
   return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 export function formatTime(timestamp) {
@@ -52,25 +57,28 @@ export function formatTime(timestamp) {
   if (diff < 60 * 1000) {
     // 小于1分钟
     return '刚刚';
-  }
-  else if (diff < 3600 * 1000) {
+  } else if (diff < 3600 * 1000) {
     // 小于1小时
     return `${Math.floor(diff / 60 / 1000)}分钟前`;
-  }
-  else if (date.getDate() === now.getDate()) {
+  } else if (date.getDate() === now.getDate()) {
     // 同一天
-    return date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
-  }
-  else if (now - date < 86400 * 7 * 1000) {
+    return date.toLocaleTimeString('zh-CN', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } else if (now - date < 86400 * 7 * 1000) {
     // 一周内
     const days = ['日', '一', '二', '三', '四', '五', '六'];
-    return `周${days[date.getDay()]} ${date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' })}`;
-  }
-  else if (date.getFullYear() === now.getFullYear()) {
+    return `周${days[date.getDay()]} ${date.toLocaleTimeString('zh-CN', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit'
+    })}`;
+  } else if (date.getFullYear() === now.getFullYear()) {
     // 同一年
     return `${date.getMonth() + 1}月${date.getDate()}日`;
-  }
-  else {
+  } else {
     // 其他情况
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   }
@@ -79,7 +87,7 @@ export function formatTime(timestamp) {
 export async function fetchRooms() {
   const response = await fetch('/api/room', {
     headers: {
-      'Authorization': userInfo.token
+      Authorization: token
     }
   });
 
@@ -100,21 +108,32 @@ export function connectWebSocket() {
   if (ws) ws.close();
   ws = null;
 
-  const $chatMessages = $('#chat-messages');
-  $chatMessages.innerHTML = '';
+  clearChatMessages();
 
   ws = new WebSocket(`ws://${window.location.host}/ws`);
 
   ws.onopen = wsOnOpen;
-  ws.onmessage = (event) => {
+  ws.onmessage = event => {
     const data = JSON.parse(event.data);
     switch (data.type) {
-      case 'room': wsOnRoom(data); break;
-      case 'history': wsOnHistory(data); break;
-      case 'chat': wsOnChat(data); break;
-      case 'updateRead': wsOnUpdateRead(data); break;
-      case 'userStatus': wsOnUserStatus(data); break;
-      case 'error': showError(data.message); break;
+      case 'room':
+        wsOnRoom(data);
+        break;
+      case 'history':
+        wsOnHistory(data);
+        break;
+      case 'chat':
+        wsOnChat(data);
+        break;
+      case 'updateRead':
+        wsOnUpdateRead(data);
+        break;
+      case 'userStatus':
+        wsOnUserStatus(data);
+        break;
+      case 'error':
+        showError(data.message);
+        break;
     }
   };
   ws.onerror = wsOnError;
@@ -126,14 +145,15 @@ function wsOnOpen(event) {
   isConnecting = false;
   reconnectAttempts = 0;
 
-  const $chatMessages = $('#chat-messages');
-  $chatMessages.innerHTML = '';
+  clearChatMessages();
 
-  ws.send(JSON.stringify({
-    type: 'join',
-    token: userInfo.token,
-    rid: currentRoomId
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'join',
+      token: token,
+      rid: currentRoomId
+    })
+  );
 
   startTimeUpdates();
 }
@@ -147,7 +167,7 @@ function wsOnRoom(data) {
     userDetailsMap[uid] = rest;
   });
 
-  $('.room-title')[0].textContent = roomData.name;
+  setRoomTitle(roomData.name);
 
   updateMembersList();
 }
@@ -156,22 +176,23 @@ function wsOnHistory(data) {
   console.log('wsOnHistory', data);
   messages = data.data;
 
-  const $chatMessages = $('#chat-messages');
-  $chatMessages.innerHTML = '';
+  clearChatMessages();
 
   messages.forEach(messageData => {
-    const $message = createMessage(messageData);
-    $chatMessages.appendChild($message);
+    appendChatMessage(createMessage(messageData));
+    scrollChatToBottom();
   });
 
-  $chatMessages.scrollTop = $chatMessages.scrollHeight;
+  scrollChatToBottom();
 
   // 发送已读回执
   if (messages.length > 0) {
-    ws.send(JSON.stringify({
-      type: 'read',
-      timestamp: new Date().getTime()
-    }));
+    ws.send(
+      JSON.stringify({
+        type: 'read',
+        timestamp: new Date().getTime()
+      })
+    );
   }
 }
 
@@ -179,15 +200,15 @@ function wsOnChat(data) {
   console.log('wsOnChat', data);
   const messageData = data.data;
 
-  const $message = createMessage(messageData);
-  const $chatMessages = $('#chat-messages');
-  $chatMessages.appendChild($message);
-  $chatMessages.scrollTop = $chatMessages.scrollHeight;
+  appendChatMessage(createMessage(messageData));
+  scrollChatToBottom();
 
-  ws.send(JSON.stringify({
-    type: 'read',
-    timestamp: new Date().getTime()
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'read',
+      timestamp: new Date().getTime()
+    })
+  );
 }
 
 function wsOnUpdateRead(data) {
@@ -199,7 +220,6 @@ function wsOnUpdateRead(data) {
   });
 }
 
-// 处理用户状态更新
 function wsOnUserStatus(data) {
   console.log('wsOnUserStatus', data);
   const { uid, online } = data.data;
@@ -228,8 +248,6 @@ function wsOnError(error) {
   isConnecting = false;
 }
 
-// 保存最后一次正常关闭的标记
-let normalClose = false;
 function wsOnClose(event) {
   console.log('wsOnClose', event);
   isConnecting = false;
@@ -251,27 +269,18 @@ function wsOnClose(event) {
   normalClose = false;
 }
 
-export function switchRoom(rid) {
-  if (isConnecting || rid === currentRoomId) return;
+export function switchRoom(roomId) {
+  if (isConnecting || roomId === currentRoomId) return;
 
-  currentRoomId = rid;
+  currentRoomId = roomId;
   localStorage.setItem('lastRoomId', currentRoomId);
 
-  const $activeRoom = $('.room-item.active', false)?.[0];
-  if ($activeRoom) {
-    $activeRoom.classList.remove('active');
-  }
-
-  const $newActiveRoom = $(`.room-item[data-rid="${currentRoomId}"]`, false)[0];
-  if ($newActiveRoom) {
-    $newActiveRoom.classList.add('active');
-  }
-
-  $('#chat-messages').innerHTML = '';
+  setActiveRoomUI(currentRoomId);
+  clearChatMessages();
 
   // 正常关闭旧连接然后重新连接
   normalClose = true;
-  if (ws && ws.readyState === WebSocket.OPEN) {
+  if (isConnected()) {
     ws.close();
   }
 
@@ -281,19 +290,19 @@ export function switchRoom(rid) {
 }
 
 export function sendMessage() {
-  const $messageInput = $('#message-input');
-  const message = $messageInput.value.trim();
-  if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+  const message = getMessageInput();
+  if (!message || !isConnected()) return;
 
-  // 发送消息
-  ws.send(JSON.stringify({
-    type: 'message',
-    token: userInfo.token,
-    rid: currentRoomId,
-    content: message
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'message',
+      token: token,
+      rid: currentRoomId,
+      content: message
+    })
+  );
 
-  $messageInput.value = '';
+  clearMessageInput();
 }
 
 function startTimeUpdates() {
@@ -301,6 +310,10 @@ function startTimeUpdates() {
     clearInterval(timeUpdateInterval);
   }
   timeUpdateInterval = setInterval(updateAllMessageTimes, 10000);
+}
+
+function isConnected() {
+  return ws && ws.readyState === WebSocket.OPEN;
 }
 
 export function unload() {
@@ -317,17 +330,17 @@ export function unload() {
 
 export async function initCore() {
   // try {
-    rooms = await fetchRooms();
+  rooms = await fetchRooms();
 
-    if (rooms.length === 0) {
-      showEmptyStateInChat();
-    } else {
-      if (!currentRoomId) {
-        currentRoomId = rooms[0].rid;
-      }
-      updateRoomList(rooms);
-      connectWebSocket();
+  if (rooms.length === 0) {
+    showEmptyStateInChat();
+  } else {
+    if (!currentRoomId) {
+      currentRoomId = rooms[0].rid;
     }
+    updateRoomList(rooms);
+    connectWebSocket();
+  }
   // } catch (error) {
   //   showError(error.message);
   // }

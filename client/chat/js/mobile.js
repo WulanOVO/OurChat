@@ -1,4 +1,10 @@
-'use strict';
+import { nickname, initCore, unload, sendMessage } from './core/core.js';
+import {
+  $,
+  openRoomInfo,
+  closeRoomInfo,
+  closeReadUsersPopup
+} from './ui/common.js';
 
 function openSidebar() {
   $('#sidebar').classList.add('open');
@@ -24,7 +30,7 @@ function initMobileUI() {
   });
 
   // 点击遮罩层关闭所有面板
-  $overlay.addEventListener('click', (e) => {
+  $overlay.addEventListener('click', e => {
     if (e.target === $overlay) {
       closeSidebar();
       closeRoomInfo();
@@ -32,7 +38,6 @@ function initMobileUI() {
     }
   });
 
-  // 处理输入框获取焦点时页面调整
   const $messageInput = $('#message-input');
   $messageInput.addEventListener('focus', () => {
     // 短暂延迟后滚动到底部，解决移动键盘弹出后的视图问题
@@ -41,6 +46,22 @@ function initMobileUI() {
       $chatMessages.scrollTop = $chatMessages.scrollHeight;
     }, 300);
   });
+
+  $('.user-nickname')[0].textContent = nickname;
+  $('.user-avatar')[0].textContent = nickname[0];
+
+  $('#send-message-btn').addEventListener('click', sendMessage);
+  $('#message-input').addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  });
+
+  $('#room-info-button').addEventListener('click', openRoomInfo);
+  $('#close-room-info').addEventListener('click', closeRoomInfo);
 }
 
+initCore();
 document.addEventListener('DOMContentLoaded', initMobileUI);
+window.addEventListener('unload', unload);

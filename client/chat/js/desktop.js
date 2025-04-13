@@ -1,9 +1,4 @@
-import {
-  initCore,
-  unload,
-  userInfo,
-  sendMessage
-} from './core/core.js';
+import { nickname, initCore, unload, sendMessage } from './core/core.js';
 import {
   $,
   openRoomInfo,
@@ -11,12 +6,12 @@ import {
   closeReadUsersPopup
 } from './ui/common.js';
 
-function initDOM() {
-  $('.user-nickname')[0].textContent = userInfo.nickname;
-  $('.user-avatar')[0].textContent = userInfo.nickname[0];
+function initDesktopUI() {
+  $('.user-nickname')[0].textContent = nickname;
+  $('.user-avatar')[0].textContent = nickname[0];
 
   $('#send-message-btn').addEventListener('click', sendMessage);
-  $('#message-input').addEventListener('keydown', (event) => {
+  $('#message-input').addEventListener('keydown', event => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
@@ -26,7 +21,7 @@ function initDOM() {
   $('#room-info-button').addEventListener('click', openRoomInfo);
   $('#close-room-info').addEventListener('click', closeRoomInfo);
 
-  $('#overlay').addEventListener('click', (e) => {
+  $('#overlay').addEventListener('click', e => {
     if (e.target === $('#overlay')) {
       closeRoomInfo();
       closeReadUsersPopup();
@@ -35,5 +30,5 @@ function initDOM() {
 }
 
 initCore();
-document.addEventListener('DOMContentLoaded', initDOM);
+document.addEventListener('DOMContentLoaded', initDesktopUI);
 window.addEventListener('unload', unload);
