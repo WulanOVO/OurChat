@@ -3,7 +3,7 @@ import {
   $,
   openRoomInfo,
   closeRoomInfo,
-  closeReadUsersPopup
+  closeReadUsersPopup,
 } from './ui/common.js';
 
 function initDesktopUI() {

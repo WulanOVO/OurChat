@@ -1,20 +1,20 @@
 import {
-  updateAllMessageTimes,
-  updateReadStatus,
-  createMessage,
-  findMessageElementByTimestamp,
-  updateMembersList,
   showError,
-  showSystemMessage,
-  showEmptyStateInChat,
-  updateRoomList,
-  clearChatMessages,
   setRoomTitle,
-  appendChatMessage,
-  scrollChatToBottom,
+  createMessage,
+  updateRoomList,
   getMessageInput,
   setActiveRoomUI,
-  clearMessageInput
+  updateReadStatus,
+  appendChatMessage,
+  clearChatMessages,
+  clearMessageInput,
+  showSystemMessage,
+  updateMembersList,
+  scrollChatToBottom,
+  showEmptyStateInChat,
+  updateAllMessageTimes,
+  findMessageElementByTimestamp,
 } from '../ui/common.js';
 
 export const token = localStorage.getItem('token');

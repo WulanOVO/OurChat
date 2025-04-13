@@ -1,11 +1,11 @@
 import {
   uid,
   roomData,
-  userDetailsMap,
   formatTime,
   escapeHtml,
+  switchRoom,
   currentRoomId,
-  switchRoom
+  userDetailsMap,
 } from '../core/core.js';
 
 let elementCache = {};
@@ -176,7 +176,7 @@ export function showReadUsersPopup(readByIds) {
     const member = roomData.members?.find(m => m.uid === id);
     return {
       uid: id,
-      nickname: member?.nickname || '未知用户'
+      nickname: member?.nickname || '未知用户',
     };
   });
 
