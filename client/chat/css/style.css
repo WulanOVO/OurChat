@@ -641,6 +641,8 @@ button:disabled:hover {
   transform: translateX(105%);
   transition: transform 0.3s ease;
   border-left: 1px solid #e0f0ff;
+  display: flex;
+  flex-direction: column;
 }
 
 .room-info-panel.open {
@@ -651,6 +653,7 @@ button:disabled:hover {
   display: flex;
   padding: 15px;
   border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
 }
 
 .room-info-header h3 {
@@ -680,6 +683,24 @@ button:disabled:hover {
   flex-grow: 1;
   overflow-y: auto;
   padding: 15px;
+  height: calc(100% - 50px);
+}
+
+.room-info-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.room-info-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.room-info-content::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.room-info-content::-webkit-scrollbar-thumb:hover {
+  background: #999;
 }
 
 .room-info-avatar {
