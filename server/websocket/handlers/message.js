@@ -3,17 +3,17 @@ const WebSocket = require('ws');
 async function handleMessage(ws, data, users, dbMessages) {
   const user = users.get(ws);
   if (!user) {
-    ws.send(JSON.stringify({ type: 'error', message: '请先加入房间' }));
+    ws.send(JSON.stringify({ action: 'error', message: '请先加入房间' }));
     return;
   }
 
   if (!data.content || typeof data.content !== 'string') {
-    ws.send(JSON.stringify({ type: 'error', message: '消息格式不正确' }));
+    ws.send(JSON.stringify({ action: 'error', message: '消息格式不正确' }));
     return;
   }
 
   if (data.content.length > 1000) {
-    ws.send(JSON.stringify({ type: 'error', message: '消息长度不能超过1000字符' }));
+    ws.send(JSON.stringify({ action: 'error', message: '消息长度不能超过1000字符' }));
     return;
   }
 
@@ -21,7 +21,7 @@ async function handleMessage(ws, data, users, dbMessages) {
     room: user.rid,
     sender: user.uid,
     content: data.content.trim(),
-    content_type: 'text',
+    type: 'text',
     timestamp: new Date(),
     read_by: [user.uid]
   };
@@ -29,7 +29,7 @@ async function handleMessage(ws, data, users, dbMessages) {
   const result = await dbMessages.insertOne(newMessage);
 
   if (!result.acknowledged) {
-    ws.send(JSON.stringify({ type: 'error', message: '消息发送失败' }));
+    ws.send(JSON.stringify({ action: 'error', message: '消息发送失败' }));
     return;
   }
 
@@ -44,7 +44,7 @@ async function handleMessage(ws, data, users, dbMessages) {
     if (clientUser.rid === user.rid && client.readyState === WebSocket.OPEN) {
       try {
         client.send(JSON.stringify({
-          type: 'chat',
+          action: 'chat',
           data: messageData
         }));
       } catch (err) {
