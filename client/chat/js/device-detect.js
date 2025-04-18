@@ -1,38 +1,16 @@
 (() => {
-  function isMobileDevice() {
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  const currentUrl = window.location.href;
+  const searchParams = new URLSearchParams(window.location.search);
+  const forceCurrentView = searchParams.get('force_current_view');
+  if (forceCurrentView === 'true') return;
+  const isMobileUrl = currentUrl.includes('mobile.html');
 
-    if (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)) {
-      return true;
-    }
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
 
-    if (window.innerWidth < 768) {
-      return true;
-    }
-
-    return false;
+  if (isMobile && !isMobileUrl) {
+    window.location.href = 'mobile.html';
+  } else if (!isMobile && isMobileUrl) {
+    window.location.href = 'index.html';
   }
-
-  function getCurrentPage() {
-    const path = window.location.pathname;
-    const pageName = path.split('/').pop();
-    return pageName || 'index.html';
-  }
-
-  function redirectToProperPage() {
-    const currentPage = getCurrentPage();
-    const isMobile = isMobileDevice();
-
-    if (currentPage === 'index.html' || currentPage === '') {
-      if (isMobile) {
-        window.location.href = '/chat/mobile.html';
-      }
-    }
-
-    else if (currentPage === 'mobile.html' && !isMobile) {
-      window.location.href = '/chat/index.html';
-    }
-  }
-
-  window.addEventListener('DOMContentLoaded', redirectToProperPage);
 })();

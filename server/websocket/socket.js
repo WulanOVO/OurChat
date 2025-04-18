@@ -24,7 +24,7 @@ async function init(server) {
       try {
         const data = JSON.parse(message);
 
-        switch (data.type) {
+        switch (data.action) {
           case 'join':
             await handleJoin(ws, data, dbRooms, dbMessages, users);
             break;
@@ -40,7 +40,7 @@ async function init(server) {
       } catch (err) {
         console.error('WebSocket错误:', err);
         ws.send(JSON.stringify({
-          type: 'error',
+          action: 'error',
           message: '服务器内部错误'
         }));
       }
@@ -71,7 +71,7 @@ async function init(server) {
 
       if (user.rid === roomId) {
         ws.send(JSON.stringify({
-          type: 'userStatus',
+          action: 'userStatus',
           data: {
             uid: userId,
             online: isOnline

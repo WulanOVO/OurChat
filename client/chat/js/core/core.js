@@ -65,7 +65,7 @@ export function formatTime(timestamp) {
     return date.toLocaleTimeString('zh-CN', {
       hour12: false,
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   } else if (now - date < 86400 * 7 * 1000) {
     // 一周内
@@ -73,7 +73,7 @@ export function formatTime(timestamp) {
     return `周${days[date.getDay()]} ${date.toLocaleTimeString('zh-CN', {
       hour12: false,
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })}`;
   } else if (date.getFullYear() === now.getFullYear()) {
     // 同一年
@@ -87,8 +87,8 @@ export function formatTime(timestamp) {
 export async function fetchRooms() {
   const response = await fetch('/api/room', {
     headers: {
-      Authorization: token
-    }
+      Authorization: token,
+    },
   });
 
   const data = await response.json();
@@ -115,7 +115,7 @@ export function connectWebSocket() {
   ws.onopen = wsOnOpen;
   ws.onmessage = event => {
     const data = JSON.parse(event.data);
-    switch (data.type) {
+    switch (data.action) {
       case 'room':
         wsOnRoom(data);
         break;
@@ -149,9 +149,9 @@ function wsOnOpen(event) {
 
   ws.send(
     JSON.stringify({
-      type: 'join',
+      action: 'join',
       token: token,
-      rid: currentRoomId
+      rid: currentRoomId,
     })
   );
 
@@ -189,8 +189,8 @@ function wsOnHistory(data) {
   if (messages.length > 0) {
     ws.send(
       JSON.stringify({
-        type: 'read',
-        timestamp: new Date().getTime()
+        action: 'read',
+        timestamp: new Date().getTime(),
       })
     );
   }
@@ -205,8 +205,8 @@ function wsOnChat(data) {
 
   ws.send(
     JSON.stringify({
-      type: 'read',
-      timestamp: new Date().getTime()
+      action: 'read',
+      timestamp: new Date().getTime(),
     })
   );
 }
@@ -295,10 +295,10 @@ export function sendMessage() {
 
   ws.send(
     JSON.stringify({
-      type: 'message',
+      action: 'message',
       token: token,
       rid: currentRoomId,
-      content: message
+      content: message,
     })
   );
 

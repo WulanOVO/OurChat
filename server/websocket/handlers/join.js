@@ -5,7 +5,7 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
   const decoded = verifyToken(token);
 
   if (!decoded) {
-    ws.send(JSON.stringify({ type: 'error', message: '未授权的访问' }));
+    ws.send(JSON.stringify({ action: 'error', message: '未授权的访问' }));
     ws.close();
     return null;
   }
@@ -13,7 +13,7 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
   const room = await dbRooms.findOne({ rid });
 
   if (!room) {
-    ws.send(JSON.stringify({ type: 'error', message: '房间不存在' }));
+    ws.send(JSON.stringify({ action: 'error', message: '房间不存在' }));
     ws.close();
     return null;
   }
@@ -21,7 +21,7 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
   const userData = room.members.find(member => member.uid === decoded.uid);
 
   if (!userData) {
-    ws.send(JSON.stringify({ type: 'error', message: '你没有权限进入该房间' }));
+    ws.send(JSON.stringify({ action: 'error', message: '你没有权限进入该房间' }));
     ws.close();
     return null;
   }
@@ -49,7 +49,7 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
   delete roomData.rid;
 
   ws.send(JSON.stringify({
-    type: 'room',
+    action: 'room',
     data: roomData
   }));
 
@@ -65,7 +65,7 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
   messages.reverse();
 
   ws.send(JSON.stringify({
-    type: 'history',
+    action: 'history',
     data: messages
   }));
 }

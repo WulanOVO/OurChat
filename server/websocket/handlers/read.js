@@ -3,7 +3,7 @@ const WebSocket = require('ws');
 async function handleRead(ws, data, users, dbMessages) {
   const reader = users.get(ws);
   if (!reader) {
-    ws.send(JSON.stringify({ type: 'error', message: '请先加入房间' }));
+    ws.send(JSON.stringify({ action: 'error', message: '请先加入房间' }));
     return;
   }
 
@@ -29,7 +29,7 @@ async function handleRead(ws, data, users, dbMessages) {
     for (const [client, clientUser] of users.entries()) {
       if (clientUser.rid === reader.rid && client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify({
-          type: 'updateRead',
+          action: 'updateRead',
           messages: updatedMessages.map(msg => ({
             timestamp: msg.timestamp,
             read_by: msg.read_by // 只传输用户ID数组
