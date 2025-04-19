@@ -31,7 +31,7 @@ export function $(selector, useCache = true) {
 }
 
 export function updateRoomList(rooms) {
-  const $roomList = $('.room-list')[0];
+  const $roomList = $('#room-list');
   $roomList.innerHTML = '';
 
   if (rooms.length === 0) {
@@ -53,9 +53,6 @@ export function updateRoomList(rooms) {
     `;
 
     $room.addEventListener('click', () => {
-      if (typeof closeSidebar === 'function') {
-        closeSidebar();
-      }
       switchRoom(room.rid);
     });
 
@@ -221,7 +218,7 @@ export function showReadUsersPopup(readByIds) {
   const closeButton = $popup.querySelector('.close-popup');
   closeButton.addEventListener('click', () => closeReadUsersPopup());
 
-  $('.app-container')[0].appendChild($popup);
+  $('#app-container').appendChild($popup);
 
   showOverlay();
 }
@@ -426,13 +423,11 @@ export function scrollChatToBottom() {
 }
 
 export function setActiveRoomUI(newRoomId) {
-  // 移除旧的 active 类
   const $activeRoom = $('.room-item.active', false)?.[0];
   if ($activeRoom) {
     $activeRoom.classList.remove('active');
   }
 
-  // 添加新的 active 类
   const $newActiveRoom = $(`.room-item[data-rid="${newRoomId}"]`, false)?.[0];
   if ($newActiveRoom) {
     $newActiveRoom.classList.add('active');

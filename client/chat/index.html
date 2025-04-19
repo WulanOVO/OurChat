@@ -6,17 +6,18 @@
     <title>OurChat</title>
     <link rel="shortcut icon" href="favicon.ico" />
     <script src="js/device-detect.js"></script>
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/common.css" />
+    <link rel="stylesheet" href="css/desktop.css" />
   </head>
 
   <body>
-    <div class="app-container">
+    <div id="app-container">
       <!-- 遮罩层 -->
-      <div class="overlay" id="overlay"></div>
+      <div id="overlay"></div>
 
-      <div class="sidebar">
+      <div id="sidebar">
         <h3>群组列表</h3>
-        <div class="room-list">
+        <div id="room-list">
           <div class="room-item active">
             <div class="room-avatar"></div>
             <div class="room-info">
@@ -26,10 +27,10 @@
           </div>
         </div>
 
-        <div class="user-info">
+        <div id="user-info">
           <div class="user-avatar"></div>
           <div class="user-nickname">加载中...</div>
-          <button id="user-settings"></button>
+          <button id="user-settings" class="btn">⚙️</button>
         </div>
       </div>
 
