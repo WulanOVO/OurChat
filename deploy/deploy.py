@@ -5,13 +5,32 @@ import tarfile
 import fnmatch
 import time
 import tqdm
-
-
-print('============开始部署============')
+import subprocess
+import sys
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-with open('config.json', 'r', encoding='utf-8') as f:
+config_path = 'config.json'
+
+print('''部署即将开始
+
+切记：
+1. package.json中版本号改了吗？
+2. 有没有新添加的文件需要排除？
+3. 切记以上两点，不然很麻烦！
+
+请在打开的文本编辑器中确认或修改配置文件
+''')
+
+if sys.platform.startswith('win'):
+    subprocess.call(['notepad', config_path])
+else:
+    editor = os.environ.get('EDITOR', 'vi')
+    subprocess.call([editor, config_path])
+
+print('============开始部署============')
+
+with open(config_path, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
 print('正在连接到服务器... ', end='')

@@ -1,9 +1,11 @@
 {
-  "name": "chatroom",
-  "version": "0.1.4",
+  "name": "ourchat",
+  "version": "0.1.4-build-7",
   "main": "server/app.js",
   "scripts": {
-    "start": "node server/app.js"
+    "start": "node server/app.js",
+    "gic": "python scripts/generate_invite_codes.py",
+    "deploy": "python deploy/deploy.py"
   },
   "author": "",
   "license": "ISC",
