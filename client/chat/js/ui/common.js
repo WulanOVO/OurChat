@@ -97,7 +97,7 @@ export function createMessage(messageData) {
 }
 
 export function showError(message) {
-  const $notifications = $('.notifications-container')[0];
+  const $notifications = $('#notifications-container');
 
   const $error = document.createElement('div');
   $error.className = 'notification error';
@@ -119,7 +119,7 @@ export function showError(message) {
 }
 
 export function showSystemMessage(message) {
-  const $notifications = $('.notifications-container')[0];
+  const $notifications = $('#notifications-container');
 
   const $systemMessage = document.createElement('div');
   $systemMessage.className = 'notification system';
@@ -155,13 +155,10 @@ export function hideOverlay() {
 }
 
 export function showReadUsersPopup(readByIds) {
-  const $existingPopup = document.querySelector('.read-users-popup');
-  if ($existingPopup) {
-    $existingPopup.remove();
-  }
+  closeReadUsersPopup();
 
   const $popup = document.createElement('div');
-  $popup.className = 'read-users-popup';
+  $popup.id = 'read-users-popup';
 
   // 确保有用户信息
   if (!readByIds || readByIds.length === 0) {
@@ -203,19 +200,19 @@ export function showReadUsersPopup(readByIds) {
     .join('');
 
   $popup.innerHTML = `
-    <div class="popup-content">
-      <div class="popup-header">
+    <div id="popup-content">
+      <div id="popup-header">
         <h3>已读用户 (${readByIds.length})</h3>
-        <button class="close-popup">&times;</button>
+        <button class="btn close-btn">&times;</button>
       </div>
-      <div class="popup-body">
+      <div id="popup-body">
         ${userList}
       </div>
     </div>
   `;
 
   // 添加关闭按钮事件
-  const closeButton = $popup.querySelector('.close-popup');
+  const closeButton = $popup.querySelector('.close-btn');
   closeButton.addEventListener('click', () => closeReadUsersPopup());
 
   $('#app-container').appendChild($popup);
@@ -224,7 +221,7 @@ export function showReadUsersPopup(readByIds) {
 }
 
 export function closeReadUsersPopup() {
-  const $popup = $('.read-users-popup', false)[0];
+  const $popup = $('#read-users-popup', false);
   if ($popup) {
     $popup.remove();
   }
@@ -259,12 +256,12 @@ export function closeRoomInfo() {
 }
 
 export function updateRoomInfo() {
-  const $roomNameDisplay = $('.room-name-display')[0];
+  const $roomNameDisplay = $('#room-name-display');
   if ($roomNameDisplay) {
     $roomNameDisplay.textContent = roomData.name;
   }
 
-  const $roomAvatar = $('#room-info-panel .room-avatar.large')[0];
+  const $roomAvatar = $('#room-info-avatar .room-avatar.large')[0];
   if ($roomAvatar) {
     $roomAvatar.textContent = roomData.name[0];
   }
@@ -278,7 +275,7 @@ export function updateRoomInfo() {
 }
 
 export function updateMembersList() {
-  const $roomMembersList = $('.room-members-list')[0];
+  const $roomMembersList = $('#room-members-list');
   if (!$roomMembersList) return;
 
   $roomMembersList.innerHTML = '';
@@ -322,7 +319,7 @@ export function updateMembersList() {
     const statusClass = isOnline ? 'online' : 'offline';
 
     $memberItem.innerHTML = `
-      <div class="member-avatar">${member.nickname[0]}</div>
+      <div class="user-avatar">${member.nickname[0]}</div>
       <div class="member-info">
         <div class="member-nickname">${escapeHtml(member.nickname)}${
       isCurrentUser ? ' (我)' : ''
@@ -402,7 +399,7 @@ export function clearChatMessages() {
 }
 
 export function setRoomTitle(title) {
-  const $roomTitle = $('.room-title')?.[0];
+  const $roomTitle = $('#room-title');
   if ($roomTitle) {
     $roomTitle.textContent = escapeHtml(title);
   }

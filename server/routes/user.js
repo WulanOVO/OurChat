@@ -58,4 +58,36 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.put('/:uid/password', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      res.status(400).json({ code: 'EMPTY_FIELDS', message: '旧密码和新密码不能为空' });
+      return;
+    }
+
+    const db = await connect();
+    const users = db.collection('users');
+    const user = await users.findOne({ uid: parseInt(uid) });
+
+    if (!user) {
+      res.status(404).json({ code: 'USER_NOT_FOUND', message: '用户不存在' });
+      return;
+    }
+    if (user.password_hash !== createHash(oldPassword)) {
+      res.status(400).json({ code: 'INCORRECT_PASSWORD', message: '旧密码错误' });
+      return;
+    }
+
+    await users.updateOne({ uid: parseInt(uid) }, { $set: { password_hash: createHash(newPassword) } });
+    res.json({ code: 'SUCCESS', message: '密码修改成功' });
+  }
+  catch (err) {
+    console.error(err);
+    res.status(500).json({ code: 'SERVER_ERROR', message: '服务器内部错误' });
+  }
+})
+
 module.exports = router;
