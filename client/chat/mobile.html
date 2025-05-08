@@ -6,29 +6,20 @@
     <title>OurChat</title>
     <link rel="shortcut icon" href="favicon.ico" />
     <script src="js/device-detect.js"></script>
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/common.css" />
     <link rel="stylesheet" href="css/mobile.css" />
   </head>
 
   <body>
-    <div class="app-container">
-      <!-- 遮罩层 -->
-      <div class="overlay" id="overlay"></div>
+    <div id="app-container">
+      <div id="overlay"></div>
 
-      <!-- 移动端侧边栏，默认隐藏 -->
-      <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
+      <div id="sidebar">
+        <div id="sidebar-header">
           <h3>群组列表</h3>
-          <button id="close-sidebar" class="close-button">
-            <svg viewBox="0 0 24 24" width="24" height="24">
-              <path
-                d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41z"
-                fill="currentColor"
-              ></path>
-            </svg>
-          </button>
+          <button id="close-sidebar-btn" class="btn close-btn">&times;</button>
         </div>
-        <div class="room-list">
+        <div id="room-list">
           <div class="room-item active">
             <div class="room-avatar"></div>
             <div class="room-info">
@@ -38,25 +29,22 @@
           </div>
         </div>
 
-        <div class="user-info">
+        <div id="user-info">
           <div class="user-avatar"></div>
           <div class="user-nickname">加载中...</div>
-          <button id="user-settings"></button>
+          <button id="user-settings" class="btn">⚙️</button>
         </div>
       </div>
 
-      <div class="chat-container">
-        <div class="chat-header">
-          <button id="toggle-sidebar" class="toggle-sidebar-button">
+      <div id="chat-container">
+        <div id="chat-header">
+          <button id="toggle-sidebar-btn" class="btn">
             <svg viewBox="0 0 24 24" width="24" height="24">
-              <path
-                d="M3,18h18v-2H3V18z M3,13h18v-2H3V13z M3,6v2h18V6H3z"
-                fill="currentColor"
-              ></path>
+              <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
           </button>
-          <div class="room-title">加载中...</div>
-          <button id="room-info-button" class="room-info-button">
+          <div id="room-title">加载中...</div>
+          <button id="room-info-button" class="btn">
             <svg viewBox="0 0 24 24" width="24" height="24">
               <path
                 d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M13,17h-2v-2h2V17z M13,13h-2V7h2V13z"
@@ -67,39 +55,31 @@
         </div>
 
         <div id="chat-messages"></div>
-        <div class="message-box">
+        <div id="message-box">
           <input type="text" id="message-input" placeholder="请输入消息..." />
           <button id="send-message-btn">发送</button>
         </div>
 
-        <!-- 群组详情页 -->
-        <div class="room-info-panel" id="room-info-panel">
-          <div class="room-info-header">
-            <button id="close-room-info" class="close-button">
-              <svg viewBox="0 0 24 24" width="24" height="24">
-                <path
-                  d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41z"
-                  fill="currentColor"
-                ></path>
-              </svg>
-            </button>
+        <div id="room-info-panel">
+          <div id="room-info-header">
+            <button id="close-room-info" class="btn close-btn">&times;</button>
             <h3>群组详情</h3>
           </div>
-          <div class="room-info-content">
-            <div class="room-info-avatar">
+          <div id="room-info-content">
+            <div id="room-info-avatar">
               <div class="room-avatar large"></div>
-              <div class="room-name-display"></div>
+              <div id="room-name-display"></div>
             </div>
-            <div class="room-members-section">
+            <div id="room-members-section">
               <h4>群组成员 (<span class="member-count">0/0</span>)</h4>
-              <div class="room-members-list"></div>
+              <div id="room-members-list"></div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="notifications-container"></div>
+    <div id="notifications-container"></div>
 
     <script src="js/core/core.js" type="module"></script>
     <script src="js/ui/common.js" type="module"></script>

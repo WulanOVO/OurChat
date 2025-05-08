@@ -1,15 +1,14 @@
 import {
-  showError,
   setRoomTitle,
   createMessage,
   updateRoomList,
   getMessageInput,
   setActiveRoomUI,
   updateReadStatus,
+  showNotification,
   appendChatMessage,
   clearChatMessages,
   clearMessageInput,
-  showSystemMessage,
   updateMembersList,
   scrollChatToBottom,
   showEmptyStateInChat,
@@ -132,7 +131,7 @@ export function connectWebSocket() {
         wsOnUserStatus(data);
         break;
       case 'error':
-        showError(data.message);
+        showNotification(data.message, 'error');
         break;
     }
   };
@@ -180,10 +179,9 @@ function wsOnHistory(data) {
 
   messages.forEach(messageData => {
     appendChatMessage(createMessage(messageData));
-    scrollChatToBottom();
   });
 
-  scrollChatToBottom();
+  scrollChatToBottom(false);
 
   // 发送已读回执
   if (messages.length > 0) {
@@ -238,7 +236,7 @@ function wsOnUserStatus(data) {
     const member = roomData.members.find(m => m.uid === uid);
     if (member) {
       const statusText = online ? '上线了' : '离线了';
-      showSystemMessage(`${member.nickname} ${statusText}`);
+      showNotification(`${member.nickname} ${statusText}`, 'system');
     }
   }
 }
@@ -262,7 +260,7 @@ function wsOnClose(event) {
     reconnectAttempts++;
     setTimeout(connectWebSocket, reconnectDelay);
   } else if (reconnectAttempts >= maxReconnectAttempts) {
-    showError('连接已断开，请刷新页面重试');
+    showNotification('连接已断开，请刷新页面重试', 'error');
   }
 
   // 重置正常关闭标记
@@ -329,19 +327,19 @@ export function unload() {
 }
 
 export async function initCore() {
-  // try {
-  rooms = await fetchRooms();
+  try {
+    rooms = await fetchRooms();
 
-  if (rooms.length === 0) {
-    showEmptyStateInChat();
-  } else {
-    if (!currentRoomId) {
-      currentRoomId = rooms[0].rid;
+    if (rooms.length === 0) {
+      showEmptyStateInChat();
+    } else {
+      if (!currentRoomId) {
+        currentRoomId = rooms[0].rid;
+      }
+      updateRoomList(rooms);
+      connectWebSocket();
     }
-    updateRoomList(rooms);
-    connectWebSocket();
+  } catch (error) {
+    showNotification(error.message, 'error');
   }
-  // } catch (error) {
-  //   showError(error.message);
-  // }
 }

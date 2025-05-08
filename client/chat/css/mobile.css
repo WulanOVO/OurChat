@@ -1,123 +1,111 @@
-/* 基础布局调整 */
-body{
-  padding: 0;
-  margin: 0;
-  height: 100%;
-  overflow: hidden;
+body {
+    flex-direction: column;
 }
 
-.app-container {
-  width: 100%;
-  height: 100vh;
-  max-width: 100%;
-  border-radius: 0;
-  flex-direction: column;
+#app-container {
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    border-radius: 0;
 }
 
-/* 侧边栏全屏 */
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
-  z-index: 30;
+
+#sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    min-width: 75%;
+    height: 100%;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 30;
+
+    &.open {
+        transform: translateX(0);
+    }
+
+    #sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px 0 0;
+        border-bottom: 1px solid #e0f0ff;
+
+        h3 {
+            padding: 15px 20px;
+            border-bottom: none;
+        }
+    }
 }
 
-.sidebar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 10px 0 0;
+#chat-header {
+    padding: 10px 15px;
+    background-color: #1e90ff;
+
+    #room-title {
+        color: #fff;
+        text-align: center;
+    }
 }
 
-.chat-header {
-  padding: 10px 15px;
-  background-color: #1e90ff;
+#toggle-sidebar-btn {
+    color: #fff;
 }
 
-.room-title {
-  color: #fff;
-  text-align: center;
+#message-box {
+    padding: 10px;
+
+    #message-input {
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    #send-message-btn {
+        padding: 8px 16px;
+    }
 }
 
-.sidebar.open {
-  transform: translateX(0);
-}
-
-.toggle-sidebar-button {
-  background: transparent;
-  padding: 5px;
-  border-radius: 50%;
-  margin-right: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toggle-sidebar-button:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-/* 消息框调整 */
-.message-box {
-  padding: 10px;
-}
-
-#message-input {
-  padding: 8px;
-  font-size: 14px;
-}
-
-#send-message-btn {
-  padding: 8px 16px;
-}
-
-/* 消息大小调整 */
 .message {
-  max-width: 85%;
+    max-width: 85%;
 }
 
-.room-info-button {
-  color: #fff;
+#room-info-button {
+    color: #fff;
 }
 
-.room-info-panel {
-  width: 100%;
+#room-info-panel {
+    width: 100%;
+
+    #room-info-header {
+        h3 {
+            padding: 15px 20px;
+        }
+    }
 }
 
-.read-users-popup {
-  width: 95vw;
+#read-users-popup {
+    width: 95vw;
+
+    .read-user {
+        padding: 10px 0;
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            font-size: 16px;
+        }
+
+        .user-name {
+            font-size: 16px;
+        }
+    }
 }
 
-.read-user {
-  padding: 10px 0;
-}
-
-.read-user .user-avatar {
-  width: 36px;
-  height: 36px;
-  font-size: 16px;
-}
-
-.read-user .user-name {
-  font-size: 16px;
-}
-
-/* 通知样式调整 */
 .notifications-container {
-  width: 90%;
-  left: 5%;
+    width: 90%;
+    left: 5%;
 }
 
-/* 遮罩层调整 */
-.overlay {
-  z-index: 25;
-}
-
-/* 用户信息区域调整 */
 .user-info {
-  padding: 15px 10px;
+    padding: 15px 10px;
 }

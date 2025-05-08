@@ -3,6 +3,7 @@ import {
   $,
   openRoomInfo,
   closeRoomInfo,
+  scrollChatToBottom,
   closeReadUsersPopup,
 } from './ui/common.js';
 
@@ -17,38 +18,20 @@ function closeSidebar() {
 }
 
 function initMobileUI() {
-  const $toggleSidebar = $('#toggle-sidebar');
-  const $closeSidebar = $('#close-sidebar');
-  const $overlay = $('#overlay');
-
-  $toggleSidebar.addEventListener('click', () => {
+  $('#toggle-sidebar-btn').addEventListener('click', () => {
     openSidebar();
   });
 
-  $closeSidebar.addEventListener('click', () => {
+  $('#close-sidebar-btn').addEventListener('click', () => {
     closeSidebar();
   });
 
-  // 点击遮罩层关闭所有面板
-  $overlay.addEventListener('click', e => {
-    if (e.target === $overlay) {
-      closeSidebar();
-      closeRoomInfo();
-      closeReadUsersPopup();
-    }
+  $('#message-input').addEventListener('focus', () => {
+    scrollChatToBottom();
   });
 
-  const $messageInput = $('#message-input');
-  $messageInput.addEventListener('focus', () => {
-    // 短暂延迟后滚动到底部，解决移动键盘弹出后的视图问题
-    setTimeout(() => {
-      const $chatMessages = $('#chat-messages');
-      $chatMessages.scrollTop = $chatMessages.scrollHeight;
-    }, 300);
-  });
-
-  $('.user-nickname')[0].textContent = nickname;
-  $('.user-avatar')[0].textContent = nickname[0];
+  $('#user-info > div.user-avatar')[0].textContent = nickname[0];
+  $('#user-info > div.user-nickname')[0].textContent = nickname;
 
   $('#send-message-btn').addEventListener('click', sendMessage);
   $('#message-input').addEventListener('keydown', event => {
@@ -60,6 +43,13 @@ function initMobileUI() {
 
   $('#room-info-button').addEventListener('click', openRoomInfo);
   $('#close-room-info').addEventListener('click', closeRoomInfo);
+
+  $('#overlay').addEventListener('click', e => {
+    if (e.target === $('#overlay')) {
+      closeSidebar();
+      closeReadUsersPopup();
+    }
+  });
 }
 
 initCore();

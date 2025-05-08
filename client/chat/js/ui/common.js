@@ -96,47 +96,31 @@ export function createMessage(messageData) {
   return $message;
 }
 
-export function showError(message) {
-  const $notifications = $('#notifications-container');
+export function showNotification(message, type) {
+  const $notificationsContainer = $('#notifications-container');
 
-  const $error = document.createElement('div');
-  $error.className = 'notification error';
-  $error.textContent = message;
+  const $notification = document.createElement('div');
+  $notification.className = `notification ${type || 'info'}`;
+  $notification.innerHTML = `<div class="notification-content">${escapeHtml(
+    message
+  )}</div>`;
 
-  // 将新消息插入到容器的开头，实现消息从上到下排列
-  if ($notifications.firstChild) {
-    $notifications.insertBefore($error, $notifications.firstChild);
-  } else {
-    $notifications.appendChild($error);
-  }
+  $notificationsContainer.appendChild($notification);
+
+  // 给DOM更新的时间，然后添加'show'类触发动画
+  setTimeout(() => {
+    $notification.classList.add('show');
+  }, 10);
 
   // 3秒后自动移除
   setTimeout(() => {
-    if ($error && $error.parentNode) {
-      $error.remove();
-    }
-  }, 3000);
-}
+    $notification.classList.remove('show');
+    $notification.classList.add('hide');
 
-export function showSystemMessage(message) {
-  const $notifications = $('#notifications-container');
-
-  const $systemMessage = document.createElement('div');
-  $systemMessage.className = 'notification system';
-  $systemMessage.textContent = message;
-
-  // 将新消息插入到容器的开头，实现消息从上到下排列
-  if ($notifications.firstChild) {
-    $notifications.insertBefore($systemMessage, $notifications.firstChild);
-  } else {
-    $notifications.appendChild($systemMessage);
-  }
-
-  // 3秒后自动移除系统消息
-  setTimeout(() => {
-    if ($systemMessage && $systemMessage.parentNode) {
-      $systemMessage.remove();
-    }
+    // 动画完成后从DOM中移除
+    setTimeout(() => {
+      $notification.remove();
+    }, 500); // 动画持续时间
   }, 3000);
 }
 
@@ -376,19 +360,29 @@ export function showEmptyStateInChat() {
   if (!$chatMessages) return;
 
   $chatMessages.innerHTML = `
-    <div class="empty-chat-state">
-      <div class="empty-icon">💬</div>
-      <div class="empty-text">没有可用的聊天房间</div>
-      <div class="empty-subtext">请联系管理员创建房间</div>
+    <div id="empty-chat-state">
+      <div id="empty-icon">💬</div>
+      <div id="empty-text">没有可用的聊天房间</div>
+      <div id="empty-subtext">请联系管理员创建房间</div>
     </div>
   `;
 
-  // 禁用输入框
-  const $messageInput = $('#message-input');
-  if ($messageInput) {
-    $messageInput.disabled = true;
-    $messageInput.placeholder = '没有可用的聊天房间';
+  $('#room-list').innerHTML = '';
+  $('#room-title').innerHTML = '没有可用的聊天房间';
+
+  const $roomInfoButton = $('#room-info-button');
+  $roomInfoButton.style.visibility = 'hidden';
+
+  const $toggleSidebarBtn = $('#toggle-sidebar-btn');
+  if ($toggleSidebarBtn) {
+    $toggleSidebarBtn.disabled = true;
   }
+
+  const $messageInput = $('#message-input');
+  $messageInput.disabled = true;
+  $messageInput.placeholder = '没有可用的聊天房间';
+
+  $('#send-message-btn').disabled = true;
 }
 
 export function clearChatMessages() {
@@ -400,9 +394,7 @@ export function clearChatMessages() {
 
 export function setRoomTitle(title) {
   const $roomTitle = $('#room-title');
-  if ($roomTitle) {
-    $roomTitle.textContent = escapeHtml(title);
-  }
+  $roomTitle.textContent = escapeHtml(title);
 }
 
 export function appendChatMessage(messageElement) {
@@ -412,9 +404,14 @@ export function appendChatMessage(messageElement) {
   }
 }
 
-export function scrollChatToBottom() {
+export function scrollChatToBottom(useAnimation = true) {
   const $chatMessages = $('#chat-messages');
-  if ($chatMessages) {
+  if (useAnimation) {
+    $chatMessages.scrollTo({
+      top: $chatMessages.scrollHeight,
+      behavior: 'smooth',
+    });
+  } else {
     $chatMessages.scrollTop = $chatMessages.scrollHeight;
   }
 }

@@ -29,7 +29,7 @@ router.post('/', async (req, res) => {
         username: user.username,
         nickname: user.nickname
       },
-      token: generateToken({ uid: user.uid }, '7d')
+      token: generateToken({ uid: user.uid })
     });
   }
   catch (err) {
