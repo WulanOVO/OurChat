@@ -11,6 +11,16 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  if (bodyData.username.length < 3 || bodyData.username.length > 30) {
+    alert("用户名长度必须在3到30个字符之间")
+    return;
+  }
+
+  if (bodyData.password.length < 6 || bodyData.password.length > 100) {
+    alert("密码长度必须在6到100个字符之间")
+    return;
+  }
+
   const res = await fetch("/api/user", {
     method: "POST",
     headers: {

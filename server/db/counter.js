@@ -1,7 +1,6 @@
-const connect = require('./connection');
+const { db } = require('./connection');
 
 async function getNextSequence(name) {
-  const db = await connect();
   const result = await db.collection('counters').findOneAndUpdate(
     { _id: name },
     { $inc: { seq: 1 } },

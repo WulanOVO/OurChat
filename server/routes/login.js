@@ -2,13 +2,27 @@ const express = require('express');
 const router = express.Router();
 const { createHash } = require('../utils/hash')
 const { generateToken } = require('../utils/token');
-const connect = require('../db/connection');
+const { db } = require('../db/connection');
+const { validate } = require('../utils/ajv');
 
 router.post('/', async (req, res) => {
+  const valid = validate(req.body, {
+    type: 'object',
+    properties: {
+      username: { type: 'string' },
+      password: { type: 'string' },
+    },
+    required: ['username', 'password'],
+  });
+
+  if (!valid) {
+    res.status(400).json({ code: 'INVALID_REQUEST', message: '请求参数错误' });
+    return;
+  }
+
   const { username, password } = req.body;
 
   try {
-    const db = await connect();
     const users = db.collection('users');
 
     const user = await users.findOne({

@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-const connect = require('../db/connection');
+const { db } = require('../db/connection');
 const handleJoin = require('./handlers/join');
 const handleMessage = require('./handlers/message');
 const handleRead = require('./handlers/read');
@@ -9,7 +9,6 @@ async function init(server) {
   const wss = new WebSocket.Server({ server, path: wsPath });
   console.log('WebSocket 服务已启动');
 
-  const db = await connect();
   const dbRooms = db.collection('rooms');
   const dbMessages = db.collection('messages');
 

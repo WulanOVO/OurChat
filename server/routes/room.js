@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../utils/token');
-const connect = require('../db/connection');
+const { db } = require('../db/connection');
 const { getNextSequence } = require('../db/counter');
+const { validate } = require('../utils/ajv');
 
 router.get('/', async (req, res) => {
   try {
@@ -10,15 +11,14 @@ router.get('/', async (req, res) => {
 
     const decoded = verifyToken(token);
     if (!decoded) {
-      return res.status(401).json({ code: 'UNAUTHORIZED', message: '未授权的访问' });
+      res.status(401).json({ code: 'UNAUTHORIZED', message: '未授权的访问' });
+      return;
     }
     const { uid } = decoded;
 
-    const db = await connect();
     const rooms = db.collection('rooms');
-
     const roomList = await rooms.find({ 'members.uid': uid }).toArray();
-    // 排除_id字段
+
     roomList.forEach(room => delete room._id);
 
     res.status(200).json({ code: 'SUCCESS', message: '获取房间列表成功', data: roomList });
@@ -35,18 +35,27 @@ router.post('/', async (req, res) => {
 
     const decoded = verifyToken(token);
     if (!decoded) {
-      return res.status(401).json({ code: 'UNAUTHORIZED', message: '未授权的访问' });
-    }
-
-    const { name, members } = req.body;
-    if (!name || !members) {
-      res.status(400).json({ code: 'MISSING_PARAMS', message: '缺少参数' });
+      res.status(401).json({ code: 'UNAUTHORIZED', message: '未授权的访问' });
       return;
     }
 
-    const rid = await getNextSequence('room_id');
+    const valid = validate(req.body, {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        members: { type: 'array' },
+      },
+      required: ['name', 'members'],
+    });
 
-    const db = await connect();
+    if (!valid) {
+      res.status(400).json({ code: 'INVALID_REQUEST', message: '请求参数错误' });
+      return;
+    }
+
+    const { name, members } = req.body;
+
+    const rid = await getNextSequence('room_id');
     const rooms = db.collection('rooms');
 
     const result = await rooms.insertOne({

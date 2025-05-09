@@ -1,27 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const { createHash } = require('../utils/hash');
-const connect = require('../db/connection');
+const { db } = require('../db/connection');
 const { getNextSequence } = require('../db/counter');
+const { validate } = require('../utils/ajv');
 
 router.post('/', async (req, res) => {
   try {
+    const valid = validate(req.body, {
+      type: 'object',
+      properties: {
+        username: { type: 'string', minLength: 3, maxLength: 30 },
+        password: { type: 'string', minLength: 6, maxLength: 100 },
+        inviteCode: { type: 'string' },
+      },
+      required: ['username', 'password', 'inviteCode'],
+    });
+
+    if (!valid) {
+      res.status(400).json({ code: 'INVALID_REQUEST', message: '请求参数错误' });
+      return;
+    }
+
     const { username, password, inviteCode } = req.body;
 
-    if (!username || !password || !inviteCode) {
-      res.status(400).json({ code: 'EMPTY_FIELDS', message: '用户名、密码或邀请码不能为空' });
-      return;
-    }
-    if (username.length > 30) {
-      res.status(400).json({ code: 'TOO_LONG_FIELDS', message: '用户名长度不能超过30个字符' });
-      return;
-    }
-    if (password.length > 100) {
-      res.status(400).json({ code: 'TOO_LONG_FIELDS', message: '密码长度不能超过100个字符' });
-      return;
-    }
-
-    const db = await connect();
     const users = db.collection('users');
     const inviteCodes = db.collection('invite_codes');
 
@@ -60,15 +62,23 @@ router.post('/', async (req, res) => {
 
 router.put('/:uid/password', async (req, res) => {
   try {
-    const { uid } = req.params;
-    const { oldPassword, newPassword } = req.body;
+    const valid = validate(req.body, {
+      type: 'object',
+      properties: {
+        oldPassword: { type: 'string' },
+        newPassword: { type: 'string' },
+      },
+      required: ['oldPassword', 'newPassword'],
+    });
 
-    if (!oldPassword || !newPassword) {
-      res.status(400).json({ code: 'EMPTY_FIELDS', message: '旧密码和新密码不能为空' });
+    if (!valid) {
+      res.status(400).json({ code: 'INVALID_REQUEST', message: '请求参数错误' });
       return;
     }
 
-    const db = await connect();
+    const { uid } = req.params;
+    const { oldPassword, newPassword } = req.body;
+
     const users = db.collection('users');
     const user = await users.findOne({ uid: parseInt(uid) });
 
