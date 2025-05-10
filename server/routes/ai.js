@@ -9,7 +9,7 @@ const openai = new OpenAI({
   apiKey: process.env.AI_API_KEY,
 });
 
-router.post('/', async (req, res) => {
+router.post('/chat', async (req, res) => {
   try {
     const token = req.headers.authorization;
 
@@ -73,12 +73,14 @@ router.post('/', async (req, res) => {
 
     // 如果已经开始发送流式响应，发送错误事件
     if (res.headersSent) {
-      res.write(`data: ${JSON.stringify({ error: '服务器内部错误' })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({
+          error: { code: 'SERVER_ERROR', message: '服务器内部错误' },
+        })}\n\n`
+      );
       res.end();
     } else {
-      res
-        .status(500)
-        .json({ code: 'INTERNAL_SERVER_ERROR', message: '服务器内部错误' });
+      res.status(500).json({ code: 'SERVER_ERROR', message: '服务器内部错误' });
     }
   }
 });

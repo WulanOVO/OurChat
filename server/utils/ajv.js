@@ -1,5 +1,4 @@
 const Ajv = require('ajv');
-
 const ajv = new Ajv();
 
 function validate(data, schema) {
