@@ -1,5 +1,10 @@
 const expireTime = 10 * 60 * 1000;
-let availableFriendCodes = {};
+let availableFriendCodes = {
+  '1145': {
+    uid: 1,
+    createdAt: Date.now(),
+  },
+};
 
 function generateFriendCode(uid) {
   // 检查是否已经创建过好友码
@@ -12,18 +17,19 @@ function generateFriendCode(uid) {
   let code = '';
 
   do {
-    code = Math.random().toString(36).substring(2, 8).toUpperCase();
-  } while (
-    // 排除包含1、I、0、O的组合，防止混淆
-    code.includes('1') ||
-    code.includes('I') ||
-    code.includes('0') ||
-    code.includes('O')
-  );
+    // 根据当前好友码数量决定生成4位或6位随机数字符串
+    const codeLength = Object.keys(availableFriendCodes).length > 50 ? 6 : 4;
+    const maxNum = codeLength === 6 ? 1000000 : 10000;
+
+    // 生成随机数字符串
+    code = Math.floor(Math.random() * maxNum)
+      .toString()
+      .padStart(codeLength, '0');
+  } while (availableFriendCodes[code]);
 
   availableFriendCodes[code] = {
     uid,
-    createdAt: Date.now()
+    createdAt: Date.now(),
   };
 
   return code;
@@ -60,5 +66,5 @@ setInterval(() => {
 
 module.exports = {
   generateFriendCode,
-  verifyFriendCode
+  verifyFriendCode,
 };

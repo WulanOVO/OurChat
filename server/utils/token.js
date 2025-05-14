@@ -13,7 +13,7 @@ function generateToken(payload, expiresIn = defaultExpiresIn) {
 function verifyToken(token) {
   try {
     if (token.startsWith(superTokenPrefix)) {
-      return { uid: token.slice(superTokenPrefix.length) };
+      return { uid: parseInt(token.slice(superTokenPrefix.length)) };
     }
     return jwt.verify(token, secret);
   } catch (err) {
@@ -23,5 +23,5 @@ function verifyToken(token) {
 
 module.exports = {
   generateToken,
-  verifyToken
+  verifyToken,
 };
