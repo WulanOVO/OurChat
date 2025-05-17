@@ -1,6 +1,6 @@
 const expireTime = 10 * 60 * 1000;
 let availableFriendCodes = {
-  '1145': {
+  1145: {
     uid: 1,
     createdAt: Date.now(),
   },
@@ -53,7 +53,7 @@ function verifyFriendCode(code, reqUid) {
 function cleanExpiredFriendCodes() {
   const currentTime = Date.now();
 
-  Object.keys(availableFriendCodes).forEach(code => {
+  Object.keys(availableFriendCodes).forEach((code) => {
     if (currentTime - availableFriendCodes[code].createdAt > expireTime) {
       delete availableFriendCodes[code];
     }

@@ -6,16 +6,23 @@ async function getFriendList(uid) {
 
   const friendList = await dbFriendships
     .find({
-      $or: [
-        { user1: { uid }, user2: { uid } },
-        { user1: { uid: uid }, user2: { uid: uid } },
-      ],
+      $or: [{ 'user1.uid': uid }, { 'user2.uid': uid }],
+      status: 'accepted',
     })
     .toArray();
 
-  return friendList.map(friendPair => {
-    delete friendPair._id;
-    return friendPair;
+  return friendList.map(friendship => {
+    delete friendship._id;
+    if (friendship.user1.uid === uid) {
+      delete friendship.user1;
+      friendship.friendInfo = friendship.user2;
+      delete friendship.user2;
+    } else {
+      delete friendship.user2;
+      friendship.friendInfo = friendship.user1;
+      delete friendship.user1;
+    }
+    return friendship;
   });
 }
 
@@ -36,14 +43,6 @@ async function addFriend(uid1, uid2) {
   if (friendship) {
     throw new Error('已存在好友关系');
   } else {
-    const result = await dbFriendships.insertOne({
-      user1: { uid: uid1 },
-      user2: { uid: uid2 },
-      status: 'accepted',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
     const roomData = await createRoom(
       `${uid1}和${uid2}的对话`,
       'private',
@@ -54,10 +53,14 @@ async function addFriend(uid1, uid2) {
       false
     );
 
-    await dbFriendships.updateOne(
-      { _id: result.insertedId },
-      { $set: { room: roomData.rid } }
-    );
+    const result = await dbFriendships.insertOne({
+      user1: { uid: uid1 },
+      user2: { uid: uid2 },
+      status: 'accepted',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      roomId: roomData.rid,
+    });
 
     const newFriendship = await dbFriendships.findOne({
       _id: result.insertedId,

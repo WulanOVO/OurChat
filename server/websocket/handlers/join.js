@@ -1,6 +1,10 @@
 const { verifyToken } = require('../../utils/token');
+const { db } = require('../../db/connection');
 
-async function handleJoin(ws, data, dbRooms, dbMessages, users) {
+const dbRooms = db.collection('rooms');
+const dbMessages = db.collection('messages');
+
+async function handleJoin(ws, data, users) {
   const { token, rid } = data;
   const decoded = verifyToken(token);
 
@@ -18,10 +22,12 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
     return null;
   }
 
-  const userData = room.members.find(member => member.uid === decoded.uid);
+  const userData = room.members.find((member) => member.uid === decoded.uid);
 
   if (!userData) {
-    ws.send(JSON.stringify({ action: 'error', message: '你没有权限进入该房间' }));
+    ws.send(
+      JSON.stringify({ action: 'error', message: '你没有权限进入该房间' })
+    );
     ws.close();
     return null;
   }
@@ -36,38 +42,43 @@ async function handleJoin(ws, data, dbRooms, dbMessages, users) {
     }
   }
 
-  const membersWithOnlineStatus = room.members.map(member => ({
+  const membersWithOnlineStatus = room.members.map((member) => ({
     ...member,
-    online: onlineUsers.has(member.uid) || member.uid === userData.uid // 当前用户或已连接的用户标记为在线
+    online: onlineUsers.has(member.uid) || member.uid === userData.uid, // 当前用户或已连接的用户标记为在线
   }));
 
   const roomData = {
     ...room,
-    members: membersWithOnlineStatus
+    members: membersWithOnlineStatus,
   };
   delete roomData._id;
   delete roomData.rid;
 
-  ws.send(JSON.stringify({
-    action: 'room',
-    data: roomData
-  }));
+  ws.send(
+    JSON.stringify({
+      action: 'room',
+      data: roomData,
+    })
+  );
 
-  const messages = await dbMessages.find({ room: rid })
+  const messages = await dbMessages
+    .find({ room: rid })
     .sort({ timestamp: -1 })
     .limit(50)
     .toArray();
-  messages.forEach(message => {
+  messages.forEach((message) => {
     delete message._id;
     delete message.room;
-    message.timestamp = Math.floor(message.timestamp.getTime() / 1000);
+    message.createdAt = Math.floor(message.createdAt.getTime() / 1000);
   });
   messages.reverse();
 
-  ws.send(JSON.stringify({
-    action: 'history',
-    data: messages
-  }));
+  ws.send(
+    JSON.stringify({
+      action: 'history',
+      data: messages,
+    })
+  );
 }
 
 module.exports = handleJoin;

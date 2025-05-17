@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
     const dbRooms = db.collection('rooms');
     const roomList = await dbRooms.find({ 'members.uid': uid }).toArray();
 
-    roomList.forEach(room => delete room._id);
+    roomList.forEach((room) => delete room._id);
 
     res.status(200).json({
       code: 'SUCCESS',

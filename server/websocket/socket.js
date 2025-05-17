@@ -5,12 +5,9 @@ const handleMessage = require('./handlers/message');
 const handleRead = require('./handlers/read');
 
 async function init(server) {
-  const wsPath = process.env.WS_PATH || '/ws';
+  const wsPath = process.env.WS_PATH;
   const wss = new WebSocket.Server({ server, path: wsPath });
   console.log('WebSocket 服务已启动');
-
-  const dbRooms = db.collection('rooms');
-  const dbMessages = db.collection('messages');
 
   const users = new Map();
   const roomUsers = new Map();
@@ -25,23 +22,25 @@ async function init(server) {
 
         switch (data.action) {
           case 'join':
-            await handleJoin(ws, data, dbRooms, dbMessages, users);
+            await handleJoin(ws, data, users);
             break;
 
           case 'message':
-            await handleMessage(ws, data, users, dbMessages);
+            await handleMessage(ws, data, users);
             break;
 
           case 'read':
-            await handleRead(ws, data, users, dbMessages);
+            await handleRead(ws, data, users);
             break;
         }
       } catch (err) {
         console.error('WebSocket错误:', err);
-        ws.send(JSON.stringify({
-          action: 'error',
-          message: '服务器内部错误'
-        }));
+        ws.send(
+          JSON.stringify({
+            action: 'error',
+            message: '服务器内部错误',
+          })
+        );
       }
     });
 
@@ -69,13 +68,15 @@ async function init(server) {
       if (user.uid === userId) continue;
 
       if (user.rid === roomId) {
-        ws.send(JSON.stringify({
-          action: 'userStatus',
-          data: {
-            uid: userId,
-            online: isOnline
-          }
-        }));
+        ws.send(
+          JSON.stringify({
+            action: 'userStatus',
+            data: {
+              uid: userId,
+              online: isOnline,
+            },
+          })
+        );
       }
     }
   }

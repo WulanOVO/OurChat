@@ -1,6 +1,6 @@
 {
   "name": "ourchat",
-  "version": "0.1.5-alpha.3",
+  "version": "0.1.5-alpha.4",
   "main": "server/app.js",
   "scripts": {
     "start": "node server/app.js",
