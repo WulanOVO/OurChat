@@ -1,9 +1,11 @@
 const { db } = require('./connection');
 const { createRoom } = require('./room');
 
-async function getFriendList(uid) {
-  const dbFriendships = db.collection('friendships');
+const dbFriendships = db.collection('friendships');
+const dbRooms = db.collection('rooms');
+const dbMessages = db.collection('messages');
 
+async function getFriendList(uid) {
   const friendList = await dbFriendships
     .find({
       $or: [{ 'user1.uid': uid }, { 'user2.uid': uid }],
@@ -44,7 +46,7 @@ async function addFriend(uid1, uid2) {
     throw new Error('已存在好友关系');
   } else {
     const roomData = await createRoom(
-      `${uid1}和${uid2}的对话`,
+      null,
       'private',
       [
         { uid: uid1, role: 'admin', nickname: uid1.toString() },
@@ -71,7 +73,38 @@ async function addFriend(uid1, uid2) {
   }
 }
 
+async function deleteFriend(uid1, uid2) {
+  // 调整顺序，保证 uid1 小于 uid2
+  if (uid1 > uid2) {
+    [uid1, uid2] = [uid2, uid1];
+  }
+
+  const friendship = await dbFriendships.findOne({
+    user1: { uid: uid1 },
+    user2: { uid: uid2 },
+    status: 'accepted',
+  });
+
+  if (!friendship) {
+    throw new Error('好友关系不存在');
+  }
+
+  await dbFriendships.deleteOne({
+    _id: friendship._id,
+  });
+
+  await dbRooms.deleteOne({
+    rid: friendship.roomId,
+  });
+
+  // 删除所有聊天记录
+  await dbMessages.deleteMany({
+    roomId: friendship.roomId,
+  });
+}
+
 module.exports = {
   getFriendList,
   addFriend,
+  deleteFriend,
 };

@@ -1,6 +1,6 @@
 import {
-  uid,
-  roomData,
+  UID,
+  roomInfo,
   formatTime,
   escapeHtml,
   switchRoom,
@@ -39,21 +39,23 @@ export function updateRoomList(rooms) {
     return;
   }
 
-  rooms.forEach(room => {
+  rooms.forEach((roomInfo) => {
     const $room = document.createElement('div');
-    $room.className = `room-item ${room.rid === currentRoomId ? 'active' : ''}`;
-    $room.dataset.rid = room.rid;
+    $room.className = `room-item ${
+      roomInfo.rid === currentRoomId ? 'active' : ''
+    }`;
+    $room.dataset.rid = roomInfo.rid;
 
     $room.innerHTML = `
-      <div class="room-avatar">${room.name[0]}</div>
+      <div class="room-avatar">${roomInfo.name[0]}</div>
       <div class="room-info">
-        <div class="room-name">${escapeHtml(room.name)}</div>
+        <div class="room-name">${escapeHtml(roomInfo.name)}</div>
         <div class="room-last-message">点击进入聊天</div>
       </div>
     `;
 
     $room.addEventListener('click', () => {
-      switchRoom(room.rid);
+      switchRoom(roomInfo.rid);
     });
 
     $roomList.appendChild($room);
@@ -61,14 +63,16 @@ export function updateRoomList(rooms) {
 }
 
 export function createMessage(messageData) {
-  const isMyMessage = messageData.sender === uid;
+  const isMyMessage = messageData.senderId === UID;
 
   const $message = document.createElement('div');
   $message.className = `message ${
     isMyMessage ? 'my-message' : 'other-message'
   }`;
 
-  const senderInfo = roomData.members?.find(m => m.uid === messageData.sender);
+  const senderInfo = roomInfo.members?.find(
+    (m) => m.uid === messageData.senderId
+  );
   const displayName = senderInfo?.nickname || '未知用户';
 
   $message.innerHTML = `
@@ -76,11 +80,11 @@ export function createMessage(messageData) {
     <div class="content">${escapeHtml(messageData.content)}</div>
     <div class="message-info">
       <span class="timestamp" data-timestamp="${
-        messageData.timestamp
-      }">${formatTime(messageData.timestamp)}</span>
+        messageData.createdAt
+      }">${formatTime(messageData.createdAt)}</span>
       <span class="read-status" data-read-by='${JSON.stringify(
-        messageData.read_by || []
-      )}'>${messageData.read_by?.length || 1}人已读</span>
+        messageData.readBy || []
+      )}'>${messageData.readBy?.length || 1}人已读</span>
     </div>
   `;
 
@@ -146,12 +150,12 @@ export function showReadUsersPopup(readByIds) {
 
   // 确保有用户信息
   if (!readByIds || readByIds.length === 0) {
-    readByIds = [uid];
+    readByIds = [UID];
   }
 
   // 根据用户ID获取用户信息
-  const readByUsers = readByIds.map(id => {
-    const member = roomData.members?.find(m => m.uid === id);
+  const readByUsers = readByIds.map((id) => {
+    const member = roomInfo.members?.find((m) => m.uid === id);
     return {
       uid: id,
       nickname: member?.nickname || '未知用户',
@@ -161,16 +165,16 @@ export function showReadUsersPopup(readByIds) {
   // 按昵称字母顺序排序用户列表
   const sortedReadBy = [...readByUsers].sort((a, b) => {
     // 当前用户始终排在最前面
-    if (a.uid === uid) return -1;
-    if (b.uid === uid) return 1;
+    if (a.uid === UID) return -1;
+    if (b.uid === UID) return 1;
 
     // 按昵称字母顺序排序
     return (a.nickname || '').localeCompare(b.nickname || '');
   });
 
   const userList = sortedReadBy
-    .map(user => {
-      const isCurrentUser = user.uid === uid;
+    .map((user) => {
+      const isCurrentUser = user.uid === UID;
       return `
       <div class="read-user">
         <span class="user-avatar">${(user.nickname ||
@@ -242,17 +246,17 @@ export function closeRoomInfo() {
 export function updateRoomInfo() {
   const $roomNameDisplay = $('#room-name-display');
   if ($roomNameDisplay) {
-    $roomNameDisplay.textContent = roomData.name;
+    $roomNameDisplay.textContent = roomInfo.name;
   }
 
   const $roomAvatar = $('#room-info-avatar .room-avatar.large')[0];
   if ($roomAvatar) {
-    $roomAvatar.textContent = roomData.name[0];
+    $roomAvatar.textContent = roomInfo.name[0];
   }
 
   const $memberCount = $('.member-count')[0];
   if ($memberCount) {
-    $memberCount.textContent = roomData.members.length;
+    $memberCount.textContent = roomInfo.members.length;
   }
 
   updateMembersList();
@@ -268,10 +272,10 @@ export function updateMembersList() {
   let onlineCount = 0;
 
   // 按当前用户在最前面，然后是在线用户，最后是离线用户排序
-  const sortedMembers = [...roomData.members].sort((a, b) => {
+  const sortedMembers = [...roomInfo.members].sort((a, b) => {
     // 当前用户始终排在最前面
-    if (a.uid === uid) return -1;
-    if (b.uid === uid) return 1;
+    if (a.uid === UID) return -1;
+    if (b.uid === UID) return 1;
 
     // 在线用户排在离线用户前面
     const aOnline = userDetailsMap[a.uid]?.online || false;
@@ -284,12 +288,12 @@ export function updateMembersList() {
     return a.nickname.localeCompare(b.nickname);
   });
 
-  sortedMembers.forEach(member => {
+  sortedMembers.forEach((member) => {
     const $memberItem = document.createElement('div');
     $memberItem.className = 'member-item';
 
     // 判断是否为当前用户，当前用户始终显示为在线
-    const isCurrentUser = member.uid === uid;
+    const isCurrentUser = member.uid === UID;
     let isOnline = false;
     if (isCurrentUser || userDetailsMap[member.uid]?.online) {
       isOnline = true;
@@ -318,13 +322,15 @@ export function updateMembersList() {
   // 更新在线人数显示
   const $memberCount = $('.member-count')[0];
   if ($memberCount) {
-    $memberCount.textContent = `${onlineCount}/${roomData.members.length}`;
+    $memberCount.textContent = `${onlineCount}/${roomInfo.members.length}`;
   }
 }
 
 export function updateAllMessageTimes() {
   const $timestamps = $('.timestamp', false);
-  $timestamps.forEach(element => {
+  if (!$timestamps) return;
+
+  $timestamps.forEach((element) => {
     const timestamp = parseInt(element.dataset.timestamp);
     if (timestamp) {
       element.textContent = formatTime(timestamp);
@@ -334,14 +340,17 @@ export function updateAllMessageTimes() {
 
 export function findMessageElementByTimestamp(timestamp) {
   const $chatMessages = $('#chat-messages');
-  if (!$chatMessages) return null;
 
   const $messages = $chatMessages.getElementsByClassName('message');
-  for (const $message of $messages) {
-    const $timestamp = $message.querySelector('.timestamp');
-    if ($timestamp && $timestamp.dataset.timestamp === timestamp) {
-      return $message;
-    }
+  const $message = Array.from($messages).find(($msg) => {
+    const messageTimestamp = parseInt(
+      $msg.querySelector('.timestamp').dataset.timestamp
+    );
+    return messageTimestamp === timestamp;
+  });
+
+  if ($message) {
+    return $message;
   }
 
   return null;

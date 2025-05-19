@@ -1,6 +1,7 @@
 const WebSocket = require('ws');
 const { db } = require('../../db/connection');
 const { validate } = require('../../utils/ajv');
+const { toObjectId } = require('../../utils/objectId');
 
 const dbMessages = db.collection('messages');
 
@@ -15,7 +16,7 @@ async function handleMessage(ws, data, users) {
     type: 'object',
     properties: {
       type: { type: 'string', enum: ['text', 'file', 'image', 'video'] },
-      content: { type: 'string' },
+      content: { type: 'string', maxLength: 1000 },
     },
     required: ['type', 'content'],
   });
@@ -27,20 +28,8 @@ async function handleMessage(ws, data, users) {
 
   const { type, content } = data;
 
-  if (!content || typeof content !== 'string') {
-    ws.send(JSON.stringify({ action: 'error', message: '消息格式不正确' }));
-    return;
-  }
-
-  if (content.length > 1000) {
-    ws.send(
-      JSON.stringify({ action: 'error', message: '消息长度不能超过1000字符' })
-    );
-    return;
-  }
-
   const newMessage = {
-    roomId: user.rid,
+    roomId: user.roomId,
     senderId: user.uid,
     content: content.trim(),
     type,
@@ -48,7 +37,10 @@ async function handleMessage(ws, data, users) {
     readBy: [user.uid],
   };
 
-  const result = await dbMessages.insertOne(newMessage);
+  const result = await dbMessages.insertOne({
+    ...newMessage,
+    roomId: toObjectId(newMessage.roomId),
+  });
 
   if (!result.acknowledged) {
     ws.send(JSON.stringify({ action: 'error', message: '消息发送失败' }));
@@ -60,14 +52,17 @@ async function handleMessage(ws, data, users) {
     createdAt: Math.floor(newMessage.createdAt.getTime() / 1000),
   };
   delete messageData._id;
-  delete messageData.room;
+  delete messageData.roomId;
 
   for (const [client, clientUser] of users.entries()) {
-    if (clientUser.rid === user.rid && client.readyState === WebSocket.OPEN) {
+    if (
+      clientUser.roomId === user.roomId &&
+      client.readyState === WebSocket.OPEN
+    ) {
       try {
         client.send(
           JSON.stringify({
-            action: 'chat',
+            action: 'message',
             data: messageData,
           })
         );

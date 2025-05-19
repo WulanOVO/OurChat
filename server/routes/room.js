@@ -4,18 +4,32 @@ const { verifyToken } = require('../utils/token');
 const { db } = require('../db/connection');
 const { createRoom } = require('../db/room');
 const { validate } = require('../utils/ajv');
+const { getPrivateRoomName } = require('../utils/room');
 
 router.get('/', async (req, res) => {
   try {
     const token = req.headers.authorization;
 
     const decoded = verifyToken(token, res);
+    if (!decoded) {
+      res.status(401).json({ code: 'UNAUTHORIZED', message: '未授权的访问' });
+      return;
+    }
+
     const { uid } = decoded;
 
     const dbRooms = db.collection('rooms');
     const roomList = await dbRooms.find({ 'members.uid': uid }).toArray();
 
-    roomList.forEach((room) => delete room._id);
+    roomList.forEach((room) => {
+      delete room._id;
+      if (room.type === 'private') {
+        room.name = getPrivateRoomName(room, uid);
+      }
+      if (typeof room.rid === 'object') {
+        room.rid = `#${room.rid.toString()}`;
+      }
+    });
 
     res.status(200).json({
       code: 'SUCCESS',

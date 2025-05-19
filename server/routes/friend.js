@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../utils/token');
 const { generateFriendCode, verifyFriendCode } = require('../utils/friendCode');
-const { getFriendList, addFriend } = require('../db/friend');
+const { getFriendList, addFriend, deleteFriend } = require('../db/friend');
 const { validate } = require('../utils/ajv');
 
 router.get('/', async (req, res) => {
@@ -113,6 +113,41 @@ router.post('/add_friend_by_code', async (req, res) => {
       code: 'SUCCESS',
       message: '好友添加成功',
       data: result,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ code: 'SERVER_ERROR', message: '服务器内部错误' });
+  }
+});
+
+router.delete('/:uid', async (req, res) => {
+  try {
+    const token = req.headers.authorization;
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      res.status(401).json({ code: 'UNAUTHORIZED', message: '未授权的访问' });
+      return;
+    }
+
+    const { uid } = decoded;
+    const friendUid = parseInt(req.params.uid);
+
+    try {
+      await deleteFriend(uid, friendUid);
+    } catch (err) {
+      if (err.message === '好友关系不存在') {
+        res
+          .status(400)
+          .json({ code: 'FRIEND_NOT_FOUND', message: '好友关系不存在' });
+        return;
+      }
+      throw err;
+    }
+
+    res.json({
+      code: 'SUCCESS',
+      message: '好友删除成功',
     });
   } catch (err) {
     console.error(err);

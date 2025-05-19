@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
 });
 
 const server = http.createServer(app);
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 server.listen(PORT, () => {
   console.log(`HTTP 服务器已启动在端口 ${PORT}`);
 });

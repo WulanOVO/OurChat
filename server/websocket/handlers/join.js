@@ -1,20 +1,26 @@
 const { verifyToken } = require('../../utils/token');
 const { db } = require('../../db/connection');
+const { getPrivateRoomName } = require('../../utils/room');
+const { toObjectId } = require('../../utils/objectId');
+const { getTimestamp } = require('../../utils/time');
 
 const dbRooms = db.collection('rooms');
 const dbMessages = db.collection('messages');
 
 async function handleJoin(ws, data, users) {
-  const { token, rid } = data;
-  const decoded = verifyToken(token);
+  const { token } = data;
+  let { rid: roomId } = data;
 
+  const decoded = verifyToken(token);
   if (!decoded) {
     ws.send(JSON.stringify({ action: 'error', message: '未授权的访问' }));
     ws.close();
     return null;
   }
 
-  const room = await dbRooms.findOne({ rid });
+  const { uid } = decoded;
+
+  const room = await dbRooms.findOne({ rid: toObjectId(roomId) });
 
   if (!room) {
     ws.send(JSON.stringify({ action: 'error', message: '房间不存在' }));
@@ -22,9 +28,9 @@ async function handleJoin(ws, data, users) {
     return null;
   }
 
-  const userData = room.members.find((member) => member.uid === decoded.uid);
+  const userInfo = room.members.find((member) => member.uid === uid);
 
-  if (!userData) {
+  if (!userInfo) {
     ws.send(
       JSON.stringify({ action: 'error', message: '你没有权限进入该房间' })
     );
@@ -32,44 +38,48 @@ async function handleJoin(ws, data, users) {
     return null;
   }
 
-  const userInfo = { rid, ...userData };
-  users.set(ws, userInfo);
+  const userInfoWithRoomId = { roomId, ...userInfo };
+  users.set(ws, userInfoWithRoomId);
 
   const onlineUsers = new Set();
-  for (const [_, user] of users.entries()) {
-    if (user.rid === rid) {
+  users.forEach((user) => {
+    if (user.roomId === roomId) {
       onlineUsers.add(user.uid);
     }
-  }
+  });
 
   const membersWithOnlineStatus = room.members.map((member) => ({
     ...member,
-    online: onlineUsers.has(member.uid) || member.uid === userData.uid, // 当前用户或已连接的用户标记为在线
+    online: onlineUsers.has(member.uid) || member.uid === userInfo.uid, // 当前用户或已连接的用户标记为在线
   }));
 
-  const roomData = {
+  const roomInfo = {
     ...room,
     members: membersWithOnlineStatus,
   };
-  delete roomData._id;
-  delete roomData.rid;
+
+  if (roomInfo.type === 'private') {
+    roomInfo.name = getPrivateRoomName(roomInfo, uid);
+  }
+  delete roomInfo._id;
+  delete roomInfo.rid;
 
   ws.send(
     JSON.stringify({
       action: 'room',
-      data: roomData,
+      data: roomInfo,
     })
   );
 
   const messages = await dbMessages
-    .find({ room: rid })
-    .sort({ timestamp: -1 })
+    .find({ roomId: toObjectId(roomId) })
+    .sort({ createdAt: -1 })
     .limit(50)
     .toArray();
   messages.forEach((message) => {
     delete message._id;
-    delete message.room;
-    message.createdAt = Math.floor(message.createdAt.getTime() / 1000);
+    delete message.roomId;
+    message.createdAt = getTimestamp(message.createdAt);
   });
   messages.reverse();
 

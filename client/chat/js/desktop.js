@@ -1,4 +1,4 @@
-import { nickname, initCore, unload, sendMessage } from './core/core.js';
+import { NICKNAME, initCore, unload, sendMessage } from './core/core.js';
 import {
   $,
   openRoomInfo,
@@ -12,11 +12,11 @@ function initDesktopUI() {
     scrollChatToBottom();
   });
 
-  $('#user-info > div.user-avatar')[0].textContent = nickname[0];
-  $('#user-info > div.user-nickname')[0].textContent = nickname;
+  $('#user-info > div.user-avatar')[0].textContent = NICKNAME[0];
+  $('#user-info > div.user-nickname')[0].textContent = NICKNAME;
 
   $('#send-message-btn').addEventListener('click', sendMessage);
-  $('#message-input').addEventListener('keydown', event => {
+  $('#message-input').addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
@@ -26,7 +26,7 @@ function initDesktopUI() {
   $('#room-info-button').addEventListener('click', openRoomInfo);
   $('#close-room-info').addEventListener('click', closeRoomInfo);
 
-  $('#overlay').addEventListener('click', e => {
+  $('#overlay').addEventListener('click', (e) => {
     if (e.target === $('#overlay')) {
       closeRoomInfo();
       closeReadUsersPopup();

@@ -1,5 +1,7 @@
 const WebSocket = require('ws');
 const { db } = require('../../db/connection');
+const { toObjectId } = require('../../utils/objectId');
+const { getTimestamp } = require('../../utils/time');
 
 const dbMessages = db.collection('messages');
 
@@ -12,12 +14,11 @@ async function handleRead(ws, data, users) {
 
   const updateResult = await dbMessages.updateMany(
     {
-      room: reader.rid,
-      timestamp: { $lte: new Date(data.timestamp) },
-      read_by: { $ne: reader.uid },
+      roomId: toObjectId(reader.roomId),
+      readBy: { $ne: reader.uid },
     },
     {
-      $addToSet: { read_by: reader.uid },
+      $addToSet: { readBy: reader.uid },
     }
   );
 
@@ -25,24 +26,24 @@ async function handleRead(ws, data, users) {
     // 获取更新后的消息
     const updatedMessages = await dbMessages
       .find({
-        room: reader.rid,
-        timestamp: { $lte: new Date(data.timestamp) },
+        roomId: toObjectId(reader.roomId),
       })
       .toArray();
+    const readMessages = updatedMessages.map((message) => ({
+      timestamp: getTimestamp(message.createdAt),
+      readBy: message.readBy,
+    }));
 
     // 广播已读状态更新，只传输用户ID
     for (const [client, clientUser] of users.entries()) {
       if (
-        clientUser.rid === reader.rid &&
+        clientUser.roomId === reader.roomId &&
         client.readyState === WebSocket.OPEN
       ) {
         client.send(
           JSON.stringify({
             action: 'updateRead',
-            messages: updatedMessages.map((msg) => ({
-              timestamp: msg.timestamp,
-              read_by: msg.read_by, // 只传输用户ID数组
-            })),
+            messages: readMessages,
           })
         );
       }

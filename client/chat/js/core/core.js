@@ -16,10 +16,10 @@ import {
   findMessageElementByTimestamp,
 } from '../ui/common.js';
 
-export const token = localStorage.getItem('token');
-export const uid = parseInt(localStorage.getItem('uid'));
-export const nickname = localStorage.getItem('nickname');
-export const lastRoomId = parseInt(localStorage.getItem('lastRoomId'));
+export const TOKEN = localStorage.getItem('token');
+export const UID = parseInt(localStorage.getItem('uid'));
+export const NICKNAME = localStorage.getItem('nickname');
+export const LAST_ROOM_ID = localStorage.getItem('lastRoomId');
 
 const reconnectDelay = 3000;
 const maxReconnectAttempts = 5;
@@ -32,9 +32,9 @@ let isConnecting = false;
 let reconnectAttempts = 0;
 let timeUpdateInterval = null;
 
-export let roomData = {};
+export let roomInfo = {};
 export let userDetailsMap = {};
-export let currentRoomId = lastRoomId;
+export let currentRoomId = LAST_ROOM_ID;
 
 export function escapeHtml(unsafe) {
   if (typeof unsafe !== 'string') {
@@ -83,16 +83,17 @@ export function formatTime(timestamp) {
   }
 }
 
-export async function fetchRooms() {
+async function fetchRooms() {
   const response = await fetch('/api/room', {
     headers: {
-      Authorization: token,
+      Authorization: TOKEN,
     },
   });
 
   const data = await response.json();
+
   if (data.code === 'SUCCESS') {
-    return data.data;
+    return data.data.roomList;
   } else if (data.code === 'UNAUTHORIZED') {
     window.location.href = '/login';
   } else {
@@ -105,14 +106,10 @@ export function connectWebSocket() {
   isConnecting = true;
 
   if (ws) ws.close();
-  ws = null;
-
-  clearChatMessages();
-
   ws = new WebSocket(`ws://${window.location.host}/ws`);
 
   ws.onopen = wsOnOpen;
-  ws.onmessage = event => {
+  ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     switch (data.action) {
       case 'room':
@@ -121,8 +118,8 @@ export function connectWebSocket() {
       case 'history':
         wsOnHistory(data);
         break;
-      case 'chat':
-        wsOnChat(data);
+      case 'message':
+        wsOnMessage(data);
         break;
       case 'updateRead':
         wsOnUpdateRead(data);
@@ -149,7 +146,7 @@ function wsOnOpen(event) {
   ws.send(
     JSON.stringify({
       action: 'join',
-      token: token,
+      token: TOKEN,
       rid: currentRoomId,
     })
   );
@@ -159,14 +156,14 @@ function wsOnOpen(event) {
 
 function wsOnRoom(data) {
   console.log('wsOnRoom', data);
-  roomData = data.data;
+  roomInfo = data.data;
 
-  roomData.members.forEach(member => {
+  roomInfo.members.forEach((member) => {
     const { uid, ...rest } = member;
     userDetailsMap[uid] = rest;
   });
 
-  setRoomTitle(roomData.name);
+  setRoomTitle(roomInfo.name);
 
   updateMembersList();
 }
@@ -177,7 +174,7 @@ function wsOnHistory(data) {
 
   clearChatMessages();
 
-  messages.forEach(messageData => {
+  messages.forEach((messageData) => {
     appendChatMessage(createMessage(messageData));
   });
 
@@ -188,14 +185,13 @@ function wsOnHistory(data) {
     ws.send(
       JSON.stringify({
         action: 'read',
-        timestamp: new Date().getTime(),
       })
     );
   }
 }
 
-function wsOnChat(data) {
-  console.log('wsOnChat', data);
+function wsOnMessage(data) {
+  console.log('wsOnMessage', data);
   const messageData = data.data;
 
   appendChatMessage(createMessage(messageData));
@@ -204,16 +200,17 @@ function wsOnChat(data) {
   ws.send(
     JSON.stringify({
       action: 'read',
-      timestamp: new Date().getTime(),
     })
   );
 }
 
 function wsOnUpdateRead(data) {
-  data.messages.forEach(msg => {
-    const messageElement = findMessageElementByTimestamp(msg.timestamp);
+  console.log('wsOnUpdateRead', data);
+
+  data.messages.forEach((message) => {
+    const messageElement = findMessageElementByTimestamp(message.timestamp);
     if (messageElement) {
-      updateReadStatus(messageElement, msg.read_by);
+      updateReadStatus(messageElement, message.readBy);
     }
   });
 }
@@ -232,11 +229,11 @@ function wsOnUserStatus(data) {
   updateMembersList();
 
   // 显示系统通知
-  if (roomData.members) {
-    const member = roomData.members.find(m => m.uid === uid);
+  if (roomInfo.members) {
+    const member = roomInfo.members.find((m) => m.uid === uid);
     if (member) {
       const statusText = online ? '上线了' : '离线了';
-      showNotification(`${member.nickname} ${statusText}`, 'system');
+      showNotification(`${member.nickname} ${statusText}`, 'info');
     }
   }
 }
@@ -284,6 +281,7 @@ export function switchRoom(roomId) {
 
   // 重置重连计数器
   reconnectAttempts = 0;
+
   connectWebSocket();
 }
 
@@ -291,11 +289,15 @@ export function sendMessage() {
   const message = getMessageInput();
   if (!message || !isConnected()) return;
 
+  if (message.length > 1000) {
+    showNotification('消息长度不能超过1000字符', 'error');
+    return;
+  }
+
   ws.send(
     JSON.stringify({
       action: 'message',
-      token: token,
-      rid: currentRoomId,
+      type: 'text',
       content: message,
     })
   );

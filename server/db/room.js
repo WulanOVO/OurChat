@@ -4,7 +4,9 @@ const { getNextSequence } = require('./counter');
 async function createRoom(name, type, members, allocateNumberRoomId) {
   const dbRooms = db.collection('rooms');
 
-  const roomId = allocateNumberRoomId ? await getNextSequence('room_id') : null;
+  const roomId = allocateNumberRoomId
+    ? (await getNextSequence('room_id')).toString()
+    : null;
 
   const result = await dbRooms.insertOne({
     rid: roomId,
