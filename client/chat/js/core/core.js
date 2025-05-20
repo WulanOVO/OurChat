@@ -111,7 +111,7 @@ export function connectWebSocket() {
   ws.onopen = wsOnOpen;
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    switch (data.action) {
+    switch (data.event) {
       case 'room':
         wsOnRoom(data);
         break;
@@ -124,8 +124,11 @@ export function connectWebSocket() {
       case 'updateRead':
         wsOnUpdateRead(data);
         break;
-      case 'userStatus':
-        wsOnUserStatus(data);
+      case 'userJoin':
+        wsOnUserJoin(data);
+        break;
+      case 'userLeave':
+        wsOnUserLeave(data);
         break;
       case 'error':
         showNotification(data.message, 'error');
@@ -145,7 +148,7 @@ function wsOnOpen(event) {
 
   ws.send(
     JSON.stringify({
-      action: 'join',
+      event: 'join',
       token: TOKEN,
       rid: currentRoomId,
     })
@@ -184,7 +187,7 @@ function wsOnHistory(data) {
   if (messages.length > 0) {
     ws.send(
       JSON.stringify({
-        action: 'read',
+        event: 'read',
       })
     );
   }
@@ -199,15 +202,16 @@ function wsOnMessage(data) {
 
   ws.send(
     JSON.stringify({
-      action: 'read',
+      event: 'read',
     })
   );
 }
 
 function wsOnUpdateRead(data) {
   console.log('wsOnUpdateRead', data);
+  const messageData = data.data;
 
-  data.messages.forEach((message) => {
+  messageData.forEach((message) => {
     const messageElement = findMessageElementByTimestamp(message.timestamp);
     if (messageElement) {
       updateReadStatus(messageElement, message.readBy);
@@ -215,27 +219,20 @@ function wsOnUpdateRead(data) {
   });
 }
 
-function wsOnUserStatus(data) {
-  console.log('wsOnUserStatus', data);
-  const { uid, online } = data.data;
+function wsOnUserJoin(data) {
+  console.log('wsOnUserJoin', data);
+  const { uid } = data.data;
 
-  // 更新用户状态映射
-  if (!userDetailsMap[uid]) {
-    userDetailsMap[uid] = {};
-  }
-  userDetailsMap[uid].online = online;
-
-  // 更新UI显示
+  userDetailsMap[uid].online = true;
   updateMembersList();
+}
 
-  // 显示系统通知
-  if (roomInfo.members) {
-    const member = roomInfo.members.find((m) => m.uid === uid);
-    if (member) {
-      const statusText = online ? '上线了' : '离线了';
-      showNotification(`${member.nickname} ${statusText}`, 'info');
-    }
-  }
+function wsOnUserLeave(data) {
+  console.log('wsOnUserLeave', data);
+  const { uid } = data.data;
+
+  userDetailsMap[uid].online = false;
+  updateMembersList();
 }
 
 function wsOnError(error) {
@@ -296,7 +293,7 @@ export function sendMessage() {
 
   ws.send(
     JSON.stringify({
-      action: 'message',
+      event: 'message',
       type: 'text',
       content: message,
     })

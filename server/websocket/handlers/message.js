@@ -2,13 +2,14 @@ const WebSocket = require('ws');
 const { db } = require('../../db/connection');
 const { validate } = require('../../utils/ajv');
 const { toObjectId } = require('../../utils/objectId');
+const broadcast = require('../utils/broadcast');
 
 const dbMessages = db.collection('messages');
 
-async function handleMessage(ws, data, users) {
+async function wsOnMessage(ws, data, users) {
   const user = users.get(ws);
   if (!user) {
-    ws.send(JSON.stringify({ action: 'error', message: '请先加入房间' }));
+    ws.send(JSON.stringify({ event: 'error', message: '请先加入房间' }));
     return;
   }
 
@@ -22,7 +23,7 @@ async function handleMessage(ws, data, users) {
   });
 
   if (!valid) {
-    ws.send(JSON.stringify({ action: 'error', message: '消息格式不正确' }));
+    ws.send(JSON.stringify({ event: 'error', message: '消息格式不正确' }));
     return;
   }
 
@@ -43,7 +44,7 @@ async function handleMessage(ws, data, users) {
   });
 
   if (!result.acknowledged) {
-    ws.send(JSON.stringify({ action: 'error', message: '消息发送失败' }));
+    ws.send(JSON.stringify({ event: 'error', message: '消息发送失败' }));
     return;
   }
 
@@ -54,23 +55,7 @@ async function handleMessage(ws, data, users) {
   delete messageData._id;
   delete messageData.roomId;
 
-  for (const [client, clientUser] of users.entries()) {
-    if (
-      clientUser.roomId === user.roomId &&
-      client.readyState === WebSocket.OPEN
-    ) {
-      try {
-        client.send(
-          JSON.stringify({
-            action: 'message',
-            data: messageData,
-          })
-        );
-      } catch (err) {
-        console.error('发送消息失败:', err);
-      }
-    }
-  }
+  broadcast('message', messageData, user, users);
 }
 
-module.exports = handleMessage;
+module.exports = wsOnMessage;

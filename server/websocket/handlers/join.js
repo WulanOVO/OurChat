@@ -3,17 +3,18 @@ const { db } = require('../../db/connection');
 const { getPrivateRoomName } = require('../../utils/room');
 const { toObjectId } = require('../../utils/objectId');
 const { getTimestamp } = require('../../utils/time');
+const broadcast = require('../utils/broadcast');
 
 const dbRooms = db.collection('rooms');
 const dbMessages = db.collection('messages');
 
-async function handleJoin(ws, data, users) {
+async function wsOnJoin(ws, data, users) {
   const { token } = data;
   let { rid: roomId } = data;
 
   const decoded = verifyToken(token);
   if (!decoded) {
-    ws.send(JSON.stringify({ action: 'error', message: '未授权的访问' }));
+    ws.send(JSON.stringify({ event: 'error', message: '未授权的访问' }));
     ws.close();
     return null;
   }
@@ -23,7 +24,7 @@ async function handleJoin(ws, data, users) {
   const room = await dbRooms.findOne({ rid: toObjectId(roomId) });
 
   if (!room) {
-    ws.send(JSON.stringify({ action: 'error', message: '房间不存在' }));
+    ws.send(JSON.stringify({ event: 'error', message: '房间不存在' }));
     ws.close();
     return null;
   }
@@ -32,14 +33,14 @@ async function handleJoin(ws, data, users) {
 
   if (!userInfo) {
     ws.send(
-      JSON.stringify({ action: 'error', message: '你没有权限进入该房间' })
+      JSON.stringify({ event: 'error', message: '你没有权限进入该房间' })
     );
     ws.close();
     return null;
   }
 
-  const userInfoWithRoomId = { roomId, ...userInfo };
-  users.set(ws, userInfoWithRoomId);
+  const user = { roomId, ...userInfo };
+  users.set(ws, user);
 
   const onlineUsers = new Set();
   users.forEach((user) => {
@@ -66,7 +67,7 @@ async function handleJoin(ws, data, users) {
 
   ws.send(
     JSON.stringify({
-      action: 'room',
+      event: 'room',
       data: roomInfo,
     })
   );
@@ -85,10 +86,12 @@ async function handleJoin(ws, data, users) {
 
   ws.send(
     JSON.stringify({
-      action: 'history',
+      event: 'history',
       data: messages,
     })
   );
+
+  broadcast('userJoin', { uid }, user, users);
 }
 
-module.exports = handleJoin;
+module.exports = wsOnJoin;

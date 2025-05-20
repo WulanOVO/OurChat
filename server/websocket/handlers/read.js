@@ -2,13 +2,13 @@ const WebSocket = require('ws');
 const { db } = require('../../db/connection');
 const { toObjectId } = require('../../utils/objectId');
 const { getTimestamp } = require('../../utils/time');
-
+const broadcast = require('../utils/broadcast');
 const dbMessages = db.collection('messages');
 
-async function handleRead(ws, data, users) {
+async function wsOnRead(ws, data, users) {
   const reader = users.get(ws);
   if (!reader) {
-    ws.send(JSON.stringify({ action: 'error', message: '请先加入房间' }));
+    ws.send(JSON.stringify({ event: 'error', message: '请先加入房间' }));
     return;
   }
 
@@ -34,21 +34,8 @@ async function handleRead(ws, data, users) {
       readBy: message.readBy,
     }));
 
-    // 广播已读状态更新，只传输用户ID
-    for (const [client, clientUser] of users.entries()) {
-      if (
-        clientUser.roomId === reader.roomId &&
-        client.readyState === WebSocket.OPEN
-      ) {
-        client.send(
-          JSON.stringify({
-            action: 'updateRead',
-            messages: readMessages,
-          })
-        );
-      }
-    }
+    broadcast('updateRead', readMessages, reader, users);
   }
 }
 
-module.exports = handleRead;
+module.exports = wsOnRead;

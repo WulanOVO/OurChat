@@ -1,8 +1,9 @@
 const WebSocket = require('ws');
 const { db } = require('../db/connection');
-const handleJoin = require('./handlers/join');
-const handleMessage = require('./handlers/message');
-const handleRead = require('./handlers/read');
+const wsOnJoin = require('./handlers/join');
+const wsOnMessage = require('./handlers/message');
+const wsOnRead = require('./handlers/read');
+const wsOnClose = require('./handlers/close');
 
 async function init(server) {
   const wsPath = process.env.WS_PATH;
@@ -16,28 +17,32 @@ async function init(server) {
       try {
         const data = JSON.parse(message);
 
-        switch (data.action) {
+        switch (data.event) {
           case 'join':
-            await handleJoin(ws, data, users);
+            await wsOnJoin(ws, data, users);
             break;
 
           case 'message':
-            await handleMessage(ws, data, users);
+            await wsOnMessage(ws, data, users);
             break;
 
           case 'read':
-            await handleRead(ws, data, users);
+            await wsOnRead(ws, data, users);
             break;
         }
       } catch (err) {
         console.error('WebSocket错误:', err);
         ws.send(
           JSON.stringify({
-            action: 'error',
+            event: 'error',
             message: '服务器内部错误',
           })
         );
       }
+    });
+
+    ws.on('close', () => {
+      wsOnClose(ws, users);
     });
   });
 }
