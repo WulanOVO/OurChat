@@ -46,11 +46,23 @@ export function updateRoomList(rooms) {
     }`;
     $room.dataset.rid = roomInfo.rid;
 
+    // 处理最后一条消息显示
+    let lastMessageText = '点击进入聊天';
+    if (roomInfo.lastMessage) {
+      const { content, type, senderId } = roomInfo.lastMessage;
+      lastMessageText = senderId === UID ? `我: ${content}` : content;
+
+      // 限制显示长度
+      if (lastMessageText.length > 20) {
+        lastMessageText = lastMessageText.substring(0, 20) + '...';
+      }
+    }
+
     $room.innerHTML = `
       <div class="room-avatar">${roomInfo.name[0]}</div>
       <div class="room-info">
         <div class="room-name">${escapeHtml(roomInfo.name)}</div>
-        <div class="room-last-message">点击进入聊天</div>
+        <div class="room-last-message">${escapeHtml(lastMessageText)}</div>
       </div>
     `;
 

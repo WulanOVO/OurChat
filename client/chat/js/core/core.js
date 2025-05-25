@@ -200,6 +200,21 @@ function wsOnMessage(data) {
   appendChatMessage(createMessage(messageData));
   scrollChatToBottom();
 
+  // 更新当前房间的lastMessage
+  if (rooms && rooms.length > 0) {
+    const currentRoom = rooms.find(room => room.rid === currentRoomId);
+    if (currentRoom) {
+      currentRoom.lastMessage = {
+        content: messageData.content,
+        type: messageData.type,
+        senderId: messageData.senderId,
+        createdAt: new Date(messageData.createdAt * 1000)
+      };
+      // 更新房间列表显示
+      updateRoomList(rooms);
+    }
+  }
+
   ws.send(
     JSON.stringify({
       event: 'read',

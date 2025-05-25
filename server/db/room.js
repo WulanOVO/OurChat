@@ -1,5 +1,35 @@
 const { db } = require('./connection');
 const { getNextSequence } = require('./counter');
+const { getPrivateRoomName } = require('../utils/room');
+
+async function getRoomByRoomId(roomId) {
+  const dbRooms = db.collection('rooms');
+  const roomData = await dbRooms.findOne({ rid: roomId });
+
+  if (!roomData) {
+    return null;
+  }
+  delete roomData._id;
+
+  return roomData;
+}
+
+async function getRoomsByUid(uid) {
+  const dbRooms = db.collection('rooms');
+  const roomList = await dbRooms.find({ 'members.uid': uid }).toArray();
+
+  roomList.forEach((room) => {
+    delete room._id;
+    if (room.type === 'private') {
+      room.name = getPrivateRoomName(room, uid);
+    }
+    if (typeof room.rid === 'object') {
+      room.rid = `#${room.rid.toString()}`;
+    }
+  });
+
+  return roomList;
+}
 
 async function createRoom(name, type, members, allocateNumberRoomId) {
   const dbRooms = db.collection('rooms');
@@ -29,4 +59,4 @@ async function createRoom(name, type, members, allocateNumberRoomId) {
   return roomData;
 }
 
-module.exports = { createRoom };
+module.exports = { getRoomByRoomId, getRoomsByUid, createRoom };

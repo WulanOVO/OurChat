@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../utils/token');
-const { db } = require('../db/connection');
 const { createRoom } = require('../db/room');
 const { validate } = require('../utils/ajv');
-const { getPrivateRoomName } = require('../utils/room');
+const { getRoomByRoomId, getRoomsByUid } = require('../db/room');
 
+// 获取房间列表（简略信息）
 router.get('/', async (req, res) => {
   try {
     const token = req.headers.authorization;
@@ -17,19 +17,12 @@ router.get('/', async (req, res) => {
     }
 
     const { uid } = decoded;
-
-    const dbRooms = db.collection('rooms');
-    const roomList = await dbRooms.find({ 'members.uid': uid }).toArray();
+    const roomList = await getRoomsByUid(uid);
 
     roomList.forEach((room) => {
-      delete room._id;
-      if (room.type === 'private') {
-        room.name = getPrivateRoomName(room, uid);
-      }
-      if (typeof room.rid === 'object') {
-        room.rid = `#${room.rid.toString()}`;
-      }
-    });
+      delete room.type;
+      delete room.members;
+    })
 
     res.status(200).json({
       code: 'SUCCESS',
@@ -41,6 +34,41 @@ router.get('/', async (req, res) => {
     res.status(500).json({ code: 'SERVER_ERROR', message: '服务器内部错误' });
   }
 });
+
+// 获取房间详情
+router.get('/:rid', async (req, res) => {
+  try {
+    const token = req.headers.authorization;
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      res.status(401).json({ code: 'UNAUTHORIZED', message: '未授权的访问' });
+      return;
+    }
+
+    const { uid } = decoded;
+
+    const { rid: roomId } = req.params;
+    const room = await getRoomByRoomId(roomId);
+
+    if (!room) {
+      res.status(404).json({ code: 'NOT_FOUND', message: '房间不存在' });
+      return;
+    }
+    if (!room.members.some((member) => member.uid === uid)) {
+      res.status(403).json({ code: 'FORBIDDEN', message: '没有权限访问此房间' });
+      return;
+    }
+
+    res.status(200).json({
+      code: 'SUCCESS',
+      message: '获取房间详情成功',
+      data: { room },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ code: 'SERVER_ERROR', message: '服务器内部错误' });
+  }
+})
 
 router.post('/', async (req, res) => {
   try {

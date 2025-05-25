@@ -5,6 +5,7 @@ const { toObjectId } = require('../../utils/objectId');
 const broadcast = require('../utils/broadcast');
 
 const dbMessages = db.collection('messages');
+const dbRooms = db.collection('rooms');
 
 async function wsOnMessage(ws, data, users) {
   const user = users.get(ws);
@@ -47,6 +48,21 @@ async function wsOnMessage(ws, data, users) {
     ws.send(JSON.stringify({ event: 'error', message: '消息发送失败' }));
     return;
   }
+
+  // 更新房间的lastMessage信息
+  await dbRooms.updateOne(
+    { rid: toObjectId(user.roomId) },
+    {
+      $set: {
+        lastMessage: {
+          content: content.trim(),
+          type,
+          senderId: user.uid,
+          createdAt: newMessage.createdAt
+        }
+      }
+    }
+  );
 
   const messageData = {
     ...newMessage,
