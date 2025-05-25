@@ -20,7 +20,6 @@ router.get('/', async (req, res) => {
     const roomList = await getRoomsByUid(uid);
 
     roomList.forEach((room) => {
-      delete room.type;
       delete room.members;
     })
 

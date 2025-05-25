@@ -89,6 +89,10 @@ body {
         font-size: 32px;
         margin-bottom: 10px;
     }
+
+    &.private {
+        background: #4caf50;
+    }
 }
 
 #app-container {

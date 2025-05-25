@@ -41,6 +41,7 @@ export function updateRoomList(rooms) {
 
   rooms.forEach((roomInfo) => {
     const $room = document.createElement('div');
+
     $room.className = `room-item ${
       roomInfo.rid === currentRoomId ? 'active' : ''
     }`;
@@ -59,7 +60,7 @@ export function updateRoomList(rooms) {
     }
 
     $room.innerHTML = `
-      <div class="room-avatar">${roomInfo.name[0]}</div>
+      <div class="room-avatar ${roomInfo.type}">${roomInfo.name[0]}</div>
       <div class="room-info">
         <div class="room-name">${escapeHtml(roomInfo.name)}</div>
         <div class="room-last-message">${escapeHtml(lastMessageText)}</div>
@@ -264,6 +265,7 @@ export function updateRoomInfo() {
   const $roomAvatar = $('#room-info-avatar .room-avatar.large')[0];
   if ($roomAvatar) {
     $roomAvatar.textContent = roomInfo.name[0];
+    $roomAvatar.classList = `room-avatar large ${roomInfo.type}`;
   }
 
   const $memberCount = $('.member-count')[0];
