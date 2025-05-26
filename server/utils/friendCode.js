@@ -1,16 +1,20 @@
-const expireTime = 10 * 60 * 1000;
-let availableFriendCodes = {
-  1145: {
-    uid: 1,
-    createdAt: Date.now(),
-  },
-};
+const expireTime = parseInt(process.env.FRIEND_CODE_EXPIRE_TIME);
+let availableFriendCodes = {};
 
-function generateFriendCode(uid) {
+function getFriendCode(uid, createNew) {
+  cleanExpiredFriendCodes();
+
   // 检查是否已经创建过好友码
   for (const code of Object.keys(availableFriendCodes)) {
     if (availableFriendCodes[code].uid === uid) {
-      return code;
+      if (createNew) {
+        delete availableFriendCodes[code];
+      } else {
+        // 返回现有好友码和过期时间
+        const createdAt = availableFriendCodes[code].createdAt;
+        const expireAt = Math.floor((createdAt + expireTime) / 1000); // 转换为秒级时间戳
+        return { code, expireAt };
+      }
     }
   }
 
@@ -27,12 +31,15 @@ function generateFriendCode(uid) {
       .padStart(codeLength, '0');
   } while (availableFriendCodes[code]);
 
+  const createdAt = Date.now();
   availableFriendCodes[code] = {
     uid,
-    createdAt: Date.now(),
+    createdAt,
   };
 
-  return code;
+  // 计算过期时间（秒级时间戳）
+  const expireAt = Math.floor((createdAt + expireTime) / 1000);
+  return { code, expireAt };
 }
 
 function verifyFriendCode(code, reqUid) {
@@ -65,6 +72,6 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 module.exports = {
-  generateFriendCode,
+  getFriendCode,
   verifyFriendCode,
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../utils/token');
-const { generateFriendCode, verifyFriendCode } = require('../utils/friendCode');
+const { getFriendCode, verifyFriendCode } = require('../utils/friendCode');
 const { getFriendList, addFriend, deleteFriend } = require('../db/friend');
 const { validate } = require('../utils/ajv');
 
@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/generate_friend_code', (req, res) => {
+router.get('/code', (req, res) => {
   try {
     const token = req.headers.authorization;
 
@@ -40,12 +40,14 @@ router.post('/generate_friend_code', (req, res) => {
     }
 
     const { uid } = decoded;
-    const friendCode = generateFriendCode(uid);
+
+    const { create_new: createNew } = req.query;
+    const { code, expireAt } = getFriendCode(uid, createNew === 'true');
 
     res.json({
       code: 'SUCCESS',
       message: '好友码创建成功',
-      data: { friendCode },
+      data: { friendCode: code, expireAt },
     });
   } catch (err) {
     console.error(err);

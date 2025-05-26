@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>添加好友 - OurChat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="friend-card">
+    <h2>添加好友</h2>
+
+    <div class="my-code-section">
+      <h3>我的好友码</h3>
+      <div class="code-display">
+        <span id="friend-code">加载中...</span>
+        <span id="expire-time"></span>
+      </div>
+      <button id="refresh-code">刷新好友码</button>
+    </div>
+
+    <div class="add-friend-section">
+      <h3>添加好友</h3>
+      <form id="add-friend-form">
+        <div class="input-group">
+          <input type="text" name="friendCode" placeholder="输入好友码" required>
+        </div>
+        <button type="submit">添加好友</button>
+      </form>
+    </div>
+
+    <div class="back-link">
+      <a href="/chat">返回聊天</a>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,125 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f0f8ff;
+}
+
+.friend-card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 15px;
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+h2 {
+  color: #1e90ff;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+}
+
+h3 {
+  color: #333;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.my-code-section, .add-friend-section {
+  margin-bottom: 2rem;
+}
+
+.code-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #f5f9ff;
+  border-radius: 8px;
+  text-align: center;
+}
+
+#friend-code {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1e90ff;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+}
+
+#expire-time {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e0f0ff;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: #1e90ff;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background: #1e90ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+button:hover {
+  background: #0066cc;
+}
+
+.back-link {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+a {
+  color: #1e90ff;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #0066cc;
+}
+
+@media (max-width: 480px) {
+  .friend-card {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+
+  #friend-code {
+    font-size: 1.5rem;
+  }
+}
