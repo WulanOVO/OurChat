@@ -119,13 +119,6 @@ body {
     flex-direction: column;
     border-right: 1px solid #eee;
 
-    h3 {
-        margin: 0;
-        padding: 20px;
-        color: #1e90ff;
-        border-bottom: 1px solid #eee;
-    }
-
     #room-list {
         flex: 1;
         overflow-y: auto;
@@ -137,6 +130,28 @@ body {
         display: flex;
         align-items: center;
         background-color: #f8f9fa;
+    }
+}
+
+#sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    border-bottom: 1px solid #eee;
+    gap: 10px;
+
+    h3 {
+        margin: 0;
+        padding: 20px;
+        color: #1e90ff;
+        flex-grow: 1;
+    }
+
+    #add-friend-button {
+        &:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: #1e90ff;
+        }
     }
 }
 

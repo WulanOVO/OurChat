@@ -82,7 +82,7 @@ router.post('/', async (req, res) => {
     const valid = validate(req.body, {
       type: 'object',
       properties: {
-        name: { type: 'string', minLength: 3, maxLength: 30 },
+        name: { type: 'string', minLength: 1, maxLength: 30 },
         members: {
           type: 'array',
           items: {
@@ -90,7 +90,7 @@ router.post('/', async (req, res) => {
             properties: {
               uid: { type: 'number' },
               role: { type: 'string', enum: ['leader', 'admin', 'member'] },
-              nickname: { type: 'string', minLength: 3, maxLength: 30 },
+              nickname: { type: 'string', minLength: 1, maxLength: 30 },
             },
             required: ['uid', 'role', 'nickname'],
           },

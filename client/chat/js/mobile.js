@@ -44,6 +44,10 @@ function initMobileUI() {
   $('#room-info-button').addEventListener('click', openRoomInfo);
   $('#close-room-info').addEventListener('click', closeRoomInfo);
 
+  $('#add-friend-button').addEventListener('click', () => {
+    window.location.href = '/new_friend';
+  });
+
   $('#overlay').addEventListener('click', (e) => {
     if (e.target === $('#overlay')) {
       closeSidebar();
