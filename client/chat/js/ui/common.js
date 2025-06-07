@@ -50,7 +50,7 @@ export function updateRoomList(rooms) {
     // 处理最后一条消息显示
     let lastMessageText = '点击进入聊天';
     if (roomInfo.lastMessage) {
-      const { content, type, senderId } = roomInfo.lastMessage;
+      const { content, senderId } = roomInfo.lastMessage;
       lastMessageText = senderId === UID ? `我: ${content}` : content;
 
       // 限制显示长度
@@ -73,6 +73,18 @@ export function updateRoomList(rooms) {
 
     $roomList.appendChild($room);
   });
+}
+
+export function updateLastMessage(roomId, messageData) {
+  const $roomItem = $(`.room-item[data-rid="${roomId}"]`)[0];
+  if ($roomItem) {
+    const $lastMessage = $roomItem.querySelector('.room-last-message');
+    if ($lastMessage) {
+      const { content, senderId } = messageData;
+      const lastMessageText = senderId === UID? `我: ${content}` : content;
+      $lastMessage.textContent = escapeHtml(lastMessageText);
+    }
+  }
 }
 
 export function createMessage(messageData) {

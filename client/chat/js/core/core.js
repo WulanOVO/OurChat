@@ -10,6 +10,7 @@ import {
   clearChatMessages,
   clearMessageInput,
   updateMembersList,
+  updateLastMessage,
   scrollChatToBottom,
   showEmptyStateInChat,
   updateAllMessageTimes,
@@ -41,9 +42,9 @@ export function escapeHtml(unsafe) {
     return '';
   }
   return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/</g, '&lt;')
+    .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
@@ -130,6 +131,9 @@ export function connectWebSocket() {
       case 'userLeave':
         wsOnUserLeave(data);
         break;
+      case 'sync':
+        wsOnSync(data);
+        break;
       case 'error':
         showNotification(data.message, 'error');
         break;
@@ -140,7 +144,6 @@ export function connectWebSocket() {
 }
 
 function wsOnOpen(event) {
-  console.log('wsOnOpen', event);
   isConnecting = false;
   reconnectAttempts = 0;
 
@@ -158,7 +161,6 @@ function wsOnOpen(event) {
 }
 
 function wsOnRoom(data) {
-  console.log('wsOnRoom', data);
   roomInfo = data.data;
 
   roomInfo.members.forEach((member) => {
@@ -172,7 +174,6 @@ function wsOnRoom(data) {
 }
 
 function wsOnHistory(data) {
-  console.log('wsOnHistory', data);
   messages = data.data;
 
   clearChatMessages();
@@ -194,36 +195,22 @@ function wsOnHistory(data) {
 }
 
 function wsOnMessage(data) {
-  console.log('wsOnMessage', data);
   const messageData = data.data;
 
   appendChatMessage(createMessage(messageData));
+  updateLastMessage(currentRoomId, messageData);
   scrollChatToBottom();
 
-  // 更新当前房间的lastMessage
-  if (rooms && rooms.length > 0) {
-    const currentRoom = rooms.find(room => room.rid === currentRoomId);
-    if (currentRoom) {
-      currentRoom.lastMessage = {
-        content: messageData.content,
-        type: messageData.type,
-        senderId: messageData.senderId,
-        createdAt: new Date(messageData.createdAt * 1000)
-      };
-      // 更新房间列表显示
-      updateRoomList(rooms);
-    }
+  if (document.visibilityState === 'visible') {
+    ws.send(
+      JSON.stringify({
+        event: 'read',
+      })
+    );
   }
-
-  ws.send(
-    JSON.stringify({
-      event: 'read',
-    })
-  );
 }
 
 function wsOnUpdateRead(data) {
-  console.log('wsOnUpdateRead', data);
   const messageData = data.data;
 
   messageData.forEach((message) => {
@@ -234,19 +221,49 @@ function wsOnUpdateRead(data) {
   });
 }
 
+function wsOnSync(data) {
+  const syncData = data.data;
+
+  if (syncData.roomId !== currentRoomId) {
+    // 如果同步的消息不是当前房间的，则忽略
+    return;
+  }
+
+  if (syncData.length > 0) {
+    // 清除现有消息并显示同步的消息
+    clearChatMessages();
+
+    syncData.messages.forEach((messageData) => {
+      appendChatMessage(createMessage(messageData));
+    });
+
+    scrollChatToBottom(false);
+
+    const lastMessage = syncData.messages[syncData.messages.length - 1];
+    updateLastMessage(currentRoomId, lastMessage);
+  }
+}
+
 function wsOnUserJoin(data) {
-  console.log('wsOnUserJoin', data);
   const { uid } = data.data;
 
   userDetailsMap[uid].online = true;
+
+  if (uid !== UID) {
+    showNotification(`${userDetailsMap[uid].nickname}加入了房间`, 'info');
+  }
+
   updateMembersList();
 }
 
 function wsOnUserLeave(data) {
-  console.log('wsOnUserLeave', data);
   const { uid } = data.data;
 
   userDetailsMap[uid].online = false;
+  if (uid !== UID) {
+    showNotification(`${userDetailsMap[uid].nickname}离开了房间`, 'info');
+  }
+
   updateMembersList();
 }
 
@@ -256,7 +273,6 @@ function wsOnError(error) {
 }
 
 function wsOnClose(event) {
-  console.log('wsOnClose', event);
   isConnecting = false;
 
   // 清除时间更新定时器
@@ -328,15 +344,33 @@ function isConnected() {
   return ws && ws.readyState === WebSocket.OPEN;
 }
 
-export function unload() {
-  if (timeUpdateInterval) {
-    clearInterval(timeUpdateInterval);
-  }
+// 处理页面可见性变化
+function handleVisibilityChange() {
+  // 检查WebSocket连接状态
+  if (!isConnected()) {
+    reconnectAttempts = 0; // 重置重连计数
+    connectWebSocket();
+  } else {
+    // 发送同步请求，获取可能遗漏的消息
+    requestMessageSync();
 
-  // 正常关闭WebSocket连接
-  normalClose = true;
-  if (ws) {
-    ws.close();
+    ws.send(
+      JSON.stringify({
+        event: 'read',
+      })
+    );
+  }
+}
+
+// 请求同步消息
+function requestMessageSync() {
+  if (isConnected() && currentRoomId) {
+    ws.send(
+      JSON.stringify({
+        event: 'sync',
+        rid: currentRoomId,
+      })
+    );
   }
 }
 
@@ -352,8 +386,27 @@ export async function initCore() {
       }
       updateRoomList(rooms);
       connectWebSocket();
+
+      // 添加页面可见性变化监听
+      document.addEventListener('visibilitychange', handleVisibilityChange);
     }
   } catch (error) {
     showNotification(error.message, 'error');
+  }
+}
+
+// 在unload函数中移除事件监听
+export function unload() {
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval);
+  }
+
+  // 移除页面可见性变化监听
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+  // 正常关闭WebSocket连接
+  normalClose = true;
+  if (ws) {
+    ws.close();
   }
 }

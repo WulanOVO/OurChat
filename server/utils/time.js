@@ -1,5 +1,5 @@
-function getTimestamp(date) {
+function toTimestamp(date) {
   return Math.floor(date.getTime() / 1000);
 }
 
-module.exports = { getTimestamp };
+module.exports = { toTimestamp };

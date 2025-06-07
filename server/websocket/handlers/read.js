@@ -1,8 +1,8 @@
-const WebSocket = require('ws');
 const { db } = require('../../db/connection');
 const { toObjectId } = require('../../utils/objectId');
-const { getTimestamp } = require('../../utils/time');
+const { toTimestamp } = require('../../utils/time');
 const broadcast = require('../utils/broadcast');
+
 const dbMessages = db.collection('messages');
 
 async function wsOnRead(ws, data, users) {
@@ -12,25 +12,32 @@ async function wsOnRead(ws, data, users) {
     return;
   }
 
-  const updateResult = await dbMessages.updateMany(
-    {
+  // 先找出需要更新的消息ID
+  const messagesToUpdate = await dbMessages
+    .find({
       roomId: toObjectId(reader.roomId),
       readBy: { $ne: reader.uid },
-    },
-    {
-      $addToSet: { readBy: reader.uid },
-    }
-  );
+    })
+    .toArray();
 
-  if (updateResult.modifiedCount > 0) {
-    // 获取更新后的消息
+  // 如果有需要更新的消息
+  if (messagesToUpdate.length > 0) {
+    // 获取这些消息的ID
+    const messageIds = messagesToUpdate.map((msg) => msg._id);
+
+    // 更新这些消息的已读状态
+    await dbMessages.updateMany(
+      { _id: { $in: messageIds } },
+      { $addToSet: { readBy: reader.uid } }
+    );
+
+    // 只获取刚刚被更新的消息
     const updatedMessages = await dbMessages
-      .find({
-        roomId: toObjectId(reader.roomId),
-      })
+      .find({ _id: { $in: messageIds } })
       .toArray();
+
     const readMessages = updatedMessages.map((message) => ({
-      timestamp: getTimestamp(message.createdAt),
+      timestamp: toTimestamp(message.createdAt),
       readBy: message.readBy,
     }));
 

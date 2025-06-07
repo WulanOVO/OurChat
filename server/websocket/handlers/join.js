@@ -2,8 +2,9 @@ const { verifyToken } = require('../../utils/token');
 const { db } = require('../../db/connection');
 const { getPrivateRoomName } = require('../../utils/room');
 const { toObjectId } = require('../../utils/objectId');
-const { getTimestamp } = require('../../utils/time');
+const { toTimestamp } = require('../../utils/time');
 const broadcast = require('../utils/broadcast');
+const { getMessages } = require('../utils/getMessages');
 
 const dbRooms = db.collection('rooms');
 const dbMessages = db.collection('messages');
@@ -72,17 +73,7 @@ async function wsOnJoin(ws, data, users) {
     })
   );
 
-  const messages = await dbMessages
-    .find({ roomId: toObjectId(roomId) })
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .toArray();
-  messages.forEach((message) => {
-    delete message._id;
-    delete message.roomId;
-    message.createdAt = getTimestamp(message.createdAt);
-  });
-  messages.reverse();
+  const messages = await getMessages(roomId);
 
   ws.send(
     JSON.stringify({

@@ -3,6 +3,7 @@ const router = express.Router();
 const { verifyToken } = require('../utils/token');
 const { createRoom } = require('../db/room');
 const { validate } = require('../utils/ajv');
+const { toTimestamp } = require('../utils/time');
 const { getRoomByRoomId, getRoomsByUid } = require('../db/room');
 
 // 获取房间列表（简略信息）
@@ -21,6 +22,12 @@ router.get('/', async (req, res) => {
 
     roomList.forEach((room) => {
       delete room.members;
+      delete room.createdAt;
+
+      const lastMessage = room.lastMessage;
+      if (lastMessage) {
+        lastMessage.createdAt = toTimestamp(lastMessage.createdAt);
+      }
     })
 
     res.status(200).json({

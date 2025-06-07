@@ -1,0 +1,3 @@
+function userRead(readerId, roomId) {
+
+}

@@ -1,7 +1,7 @@
-const WebSocket = require('ws');
 const { db } = require('../../db/connection');
 const { validate } = require('../../utils/ajv');
 const { toObjectId } = require('../../utils/objectId');
+const { toTimestamp } = require('../../utils/time');
 const broadcast = require('../utils/broadcast');
 
 const dbMessages = db.collection('messages');
@@ -66,7 +66,7 @@ async function wsOnMessage(ws, data, users) {
 
   const messageData = {
     ...newMessage,
-    createdAt: Math.floor(newMessage.createdAt.getTime() / 1000),
+    createdAt: toTimestamp(newMessage.createdAt),
   };
   delete messageData._id;
   delete messageData.roomId;
