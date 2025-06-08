@@ -1,9 +1,7 @@
 const WebSocket = require('ws');
-const { db } = require('../db/connection');
 const wsOnJoin = require('./handlers/join');
 const wsOnMessage = require('./handlers/message');
 const wsOnRead = require('./handlers/read');
-const wsOnSync = require('./handlers/sync');
 const wsOnClose = require('./handlers/close');
 
 async function init(server) {
@@ -29,10 +27,6 @@ async function init(server) {
 
           case 'read':
             await wsOnRead(ws, data, users);
-            break;
-
-          case 'sync':
-            await wsOnSync(ws, data, users);
             break;
         }
       } catch (err) {

@@ -106,7 +106,7 @@ export function connectWebSocket() {
   if (isConnecting) return;
   isConnecting = true;
 
-  if (ws) ws.close();
+  closeWebSocket();
   ws = new WebSocket(`ws://${window.location.host}/ws`);
 
   ws.onopen = wsOnOpen;
@@ -131,9 +131,6 @@ export function connectWebSocket() {
       case 'userLeave':
         wsOnUserLeave(data);
         break;
-      case 'sync':
-        wsOnSync(data);
-        break;
       case 'error':
         showNotification(data.message, 'error');
         break;
@@ -143,7 +140,15 @@ export function connectWebSocket() {
   ws.onclose = wsOnClose;
 }
 
-function wsOnOpen(event) {
+function closeWebSocket(isNormalClose = true) {
+  if (ws) {
+    normalClose = isNormalClose;
+    ws.close();
+    ws = null;
+  }
+}
+
+function wsOnOpen() {
   isConnecting = false;
   reconnectAttempts = 0;
 
@@ -221,29 +226,6 @@ function wsOnUpdateRead(data) {
   });
 }
 
-function wsOnSync(data) {
-  const syncData = data.data;
-
-  if (syncData.roomId !== currentRoomId) {
-    // 如果同步的消息不是当前房间的，则忽略
-    return;
-  }
-
-  if (syncData.length > 0) {
-    // 清除现有消息并显示同步的消息
-    clearChatMessages();
-
-    syncData.messages.forEach((messageData) => {
-      appendChatMessage(createMessage(messageData));
-    });
-
-    scrollChatToBottom(false);
-
-    const lastMessage = syncData.messages[syncData.messages.length - 1];
-    updateLastMessage(currentRoomId, lastMessage);
-  }
-}
-
 function wsOnUserJoin(data) {
   const { uid } = data.data;
 
@@ -272,13 +254,10 @@ function wsOnError(error) {
   isConnecting = false;
 }
 
-function wsOnClose(event) {
+function wsOnClose() {
   isConnecting = false;
 
-  // 清除时间更新定时器
-  if (timeUpdateInterval) {
-    clearInterval(timeUpdateInterval);
-  }
+  stopTimeUpdates();
 
   // 只有在非正常关闭且未达到最大重连次数时才重连
   if (!normalClose && reconnectAttempts < maxReconnectAttempts) {
@@ -300,12 +279,7 @@ export function switchRoom(roomId) {
 
   setActiveRoomUI(currentRoomId);
   clearChatMessages();
-
-  // 正常关闭旧连接然后重新连接
-  normalClose = true;
-  if (isConnected()) {
-    ws.close();
-  }
+  closeWebSocket();
 
   // 重置重连计数器
   reconnectAttempts = 0;
@@ -334,10 +308,15 @@ export function sendMessage() {
 }
 
 function startTimeUpdates() {
+  stopTimeUpdates();
+  timeUpdateInterval = setInterval(updateAllMessageTimes, 10000);
+}
+
+function stopTimeUpdates() {
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval);
+    timeUpdateInterval = null;
   }
-  timeUpdateInterval = setInterval(updateAllMessageTimes, 10000);
 }
 
 function isConnected() {
@@ -345,32 +324,11 @@ function isConnected() {
 }
 
 // 处理页面可见性变化
-function handleVisibilityChange() {
-  // 检查WebSocket连接状态
-  if (!isConnected()) {
-    reconnectAttempts = 0; // 重置重连计数
+export function handleVisibilityChange() {
+  if (document.visibilityState === 'hidden') {
+    closeWebSocket();
+  } else if (document.visibilityState === 'visible') {
     connectWebSocket();
-  } else {
-    // 发送同步请求，获取可能遗漏的消息
-    requestMessageSync();
-
-    ws.send(
-      JSON.stringify({
-        event: 'read',
-      })
-    );
-  }
-}
-
-// 请求同步消息
-function requestMessageSync() {
-  if (isConnected() && currentRoomId) {
-    ws.send(
-      JSON.stringify({
-        event: 'sync',
-        rid: currentRoomId,
-      })
-    );
   }
 }
 
@@ -384,10 +342,10 @@ export async function initCore() {
       if (!currentRoomId) {
         currentRoomId = rooms[0].rid;
       }
+
       updateRoomList(rooms);
       connectWebSocket();
 
-      // 添加页面可见性变化监听
       document.addEventListener('visibilitychange', handleVisibilityChange);
     }
   } catch (error) {
@@ -397,16 +355,8 @@ export async function initCore() {
 
 // 在unload函数中移除事件监听
 export function unload() {
-  if (timeUpdateInterval) {
-    clearInterval(timeUpdateInterval);
-  }
-
-  // 移除页面可见性变化监听
   document.removeEventListener('visibilitychange', handleVisibilityChange);
 
-  // 正常关闭WebSocket连接
-  normalClose = true;
-  if (ws) {
-    ws.close();
-  }
+  stopTimeUpdates();
+  closeWebSocket();
 }
