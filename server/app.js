@@ -13,7 +13,7 @@ app.use('/api/user', require('./routes/user'));
 app.use('/api/login', require('./routes/login'));
 app.use('/api/room', require('./routes/room'));
 app.use('/api/friend', require('./routes/friend'));
-app.use('/api/ai', require('./routes/ai'));
+// app.use('/api/ai', require('./routes/ai'));
 
 app.get('/', (req, res) => {
   res.redirect('/chat');
